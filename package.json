@@ -1,0 +1,23 @@
+{
+  "name": "node-cms-api",
+  "version": "1.0.0",
+  "description": "Node CMS",
+  "main": "index.js",
+  "scripts": {},
+  "keywords": [],
+  "author": "Iannis de Zwart",
+  "license": "ISC",
+  "dependencies": {
+    "@types/bcrypt": "^5.0.2",
+    "@types/better-sqlite3": "^7.6.12",
+    "@types/express": "^5.0.1",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/multer": "^1.4.12",
+    "@types/node": "^22.13.14",
+    "bcrypt": "^5.1.1",
+    "better-sqlite3": "^11.9.1",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "1.4.5-lts.2"
+  }
+}
