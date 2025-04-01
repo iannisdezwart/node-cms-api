@@ -5,7 +5,7 @@ import { Settings } from "../../settings";
 export const getPagesEndpoint =
   (dbService: DbService): RequestHandler =>
   (req, res) => {
-    const getPagesResult = dbService.getPages();
+    const getPagesResult = dbService.pages.list();
 
     if ("error" in getPagesResult) {
       res.status(500).json({

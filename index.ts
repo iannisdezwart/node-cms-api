@@ -1,4 +1,4 @@
-import { json, Router } from "express";
+import { json, Router, static as staticServe } from "express";
 import { apiRouter } from "./api/router";
 import { getDbService } from "./db/db-service";
 import { getAccessTokenService } from "./jwt/jwt-service";
@@ -10,5 +10,5 @@ export const nodeCmsRouter = (settings: Settings) => {
 
   return Router()
     .use("/api", json(), apiRouter(settings, dbService, jwtService))
-    .use("/", webRouter());
+    .use("/", staticServe(""));
 };

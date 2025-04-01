@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
 import { DbService } from "../../db/db-service";
 import { Settings } from "../../settings";
-import { compile } from "../utils/compile";
+import { compile } from "./utils/compile";
 
 export const swapPagesEndpoint =
   (settings: Settings, dbService: DbService): RequestHandler =>
@@ -29,7 +29,7 @@ export const swapPagesEndpoint =
     }
 
     // Swap the pages in the database.
-    const swapPagesResult = dbService.swapPages(swaps as [number, number][]);
+    const swapPagesResult = dbService.pages.swap(swaps as [number, number][]);
 
     if ("error" in swapPagesResult) {
       switch (swapPagesResult.error) {

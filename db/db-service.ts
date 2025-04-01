@@ -6,17 +6,30 @@ import { deletePageQuery } from "./queries/pages/delete-page-query";
 import { getPagesQuery } from "./queries/pages/get-pages-query";
 import { swapPagesQuery } from "./queries/pages/swap-pages-query";
 import { updatePageQuery } from "./queries/pages/update-page-query";
-import { getUserByUsernameQuery } from "./queries/users/get-user-by-username";
+import { addUserQuery } from "./queries/users/add-user-query";
+import { deleteUserQuery } from "./queries/users/delete-user-query";
+import { getUserQuery } from "./queries/users/get-user-query";
+import { listUsersQuery } from "./queries/users/list-users-query";
+import { updateUserPasswordQuery } from "./queries/users/update-user-password-query";
 
 export type DbService = {
-  getUserByUsername(
-    username: string
-  ): ReturnType<typeof getUserByUsernameQuery>;
-  addPage(type: string, content: string): ReturnType<typeof addPageQuery>;
-  updatePage(id: number, content: string): ReturnType<typeof updatePageQuery>;
-  deletePage(id: number): ReturnType<typeof deletePageQuery>;
-  getPages(): ReturnType<typeof getPagesQuery>;
-  swapPages(swaps: [number, number][]): ReturnType<typeof swapPagesQuery>;
+  users: {
+    get(username: string): ReturnType<typeof getUserQuery>;
+    list(): ReturnType<typeof listUsersQuery>;
+    delete(username: string): ReturnType<typeof deleteUserQuery>;
+    add(username: string, password: string): ReturnType<typeof addUserQuery>;
+    updatePassword(
+      username: string,
+      newPassword: string
+    ): ReturnType<typeof updateUserPasswordQuery>;
+  };
+  pages: {
+    add(type: string, content: string): ReturnType<typeof addPageQuery>;
+    update(id: number, content: string): ReturnType<typeof updatePageQuery>;
+    delete(id: number): ReturnType<typeof deletePageQuery>;
+    list(): ReturnType<typeof getPagesQuery>;
+    swap(swaps: [number, number][]): ReturnType<typeof swapPagesQuery>;
+  };
 };
 
 export const getDbService = (settings: Settings): DbService => {
@@ -24,13 +37,21 @@ export const getDbService = (settings: Settings): DbService => {
   initDb(db, settings);
 
   return {
-    getUserByUsername: (username: string) =>
-      getUserByUsernameQuery(db, username),
-    addPage: (type: string, content: string) => addPageQuery(db, type, content),
-    updatePage: (id: number, content: string) =>
-      updatePageQuery(db, id, content),
-    deletePage: (id: number) => deletePageQuery(db, id),
-    getPages: () => getPagesQuery(db),
-    swapPages: (swaps: [number, number][]) => swapPagesQuery(db, swaps),
+    users: {
+      get: (username: string) => getUserQuery(db, username),
+      list: () => listUsersQuery(db),
+      delete: (username: string) => deleteUserQuery(db, username),
+      add: (username: string, password: string) =>
+        addUserQuery(db, settings, username, password),
+      updatePassword: (username: string, newPassword: string) =>
+        updateUserPasswordQuery(db, settings, username, newPassword),
+    },
+    pages: {
+      add: (type: string, content: string) => addPageQuery(db, type, content),
+      update: (id: number, content: string) => updatePageQuery(db, id, content),
+      delete: (id: number) => deletePageQuery(db, id),
+      list: () => getPagesQuery(db),
+      swap: (swaps: [number, number][]) => swapPagesQuery(db, swaps),
+    },
   };
 };

@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
 import { DbService } from "../../db/db-service";
 import { Settings } from "../../settings";
-import { compile } from "../utils/compile";
+import { compile } from "./utils/compile";
 
 export const addPageEndpoint =
   (settings: Settings, dbService: DbService): RequestHandler =>
@@ -29,7 +29,7 @@ export const addPageEndpoint =
     }
 
     // Add the page to the database.
-    const addPageResult = dbService.addPage(type, content);
+    const addPageResult = dbService.pages.add(type, content);
 
     if ("pageId" in addPageResult) {
       // Compile the website and stream the output to the client.

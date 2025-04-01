@@ -1,9 +1,11 @@
 import { execFile } from "child_process";
-import { Settings } from "../../settings";
-import { existsSync } from "fs";
 import { Response } from "express";
+import { existsSync } from "fs";
+import { Settings } from "../../../settings";
 
 export const compile = (settings: Settings, res: Response) => {
+  res.setHeader("Content-Type", "application/jsonl");
+
   if (!existsSync(settings.compile.script)) {
     console.error(
       `🛠️📜⚠️ Compile script not found: ${settings.compile.script}`

@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
 import { DbService } from "../../db/db-service";
 import { Settings } from "../../settings";
-import { compile } from "../utils/compile";
+import { compile } from "./utils/compile";
 
 export const deletePageEndpoint =
   (settings: Settings, dbService: DbService): RequestHandler =>
@@ -19,7 +19,7 @@ export const deletePageEndpoint =
     }
 
     // Delete the page from the database.
-    const deletePageResult = dbService.deletePage(id);
+    const deletePageResult = dbService.pages.delete(id);
 
     if ("pageId" in deletePageResult) {
       // Compile the website and stream the output to the client.

@@ -1,8 +1,13 @@
 import { Router } from "express";
-import { uploadFilesEndpoint } from "./upload-files-endpoint";
 import multer, { diskStorage } from "multer";
+import { Settings } from "../../settings";
+import { modifyFilesEndpoint } from "./modify-files";
+import { deleteFilesEndpoint } from "./delete-files";
+import { listFilesEndpoint } from "./list-files";
+import { makeDirectoryEndpoint } from "./make-directory";
+import { uploadFilesEndpoint } from "./upload-files-endpoint";
 
-export const filesRouter = () => {
+export const filesRouter = (settings: Settings) => {
   const upload = multer({
     storage: diskStorage({
       destination: (_, __, cb) => cb(null, "./uploads/"),
@@ -10,5 +15,10 @@ export const filesRouter = () => {
     }),
   });
 
-  return Router().post("/", upload.any(), uploadFilesEndpoint);
+  return Router()
+    .get("/", listFilesEndpoint(settings))
+    .post("/", upload.any(), uploadFilesEndpoint(settings))
+    .delete("/", deleteFilesEndpoint(settings))
+    .patch("/", modifyFilesEndpoint(settings))
+    .post("/directory", makeDirectoryEndpoint(settings));
 };

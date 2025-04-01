@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
 import { DbService } from "../../db/db-service";
 import { Settings } from "../../settings";
-import { compile } from "../utils/compile";
+import { compile } from "./utils/compile";
 
 export const updatePageEndpoint =
   (settings: Settings, dbService: DbService): RequestHandler =>
@@ -23,7 +23,7 @@ export const updatePageEndpoint =
     }
 
     // Update the page in the database.
-    const updatePageResult = dbService.updatePage(id, content);
+    const updatePageResult = dbService.pages.update(id, content);
 
     if ("pageId" in updatePageResult) {
       // Compile the website and stream the output to the client.

@@ -5,4 +5,5 @@ export type Settings = {
   compile: {
     script: string;
   };
+  webroot: string;
 };
