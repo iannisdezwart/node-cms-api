@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 import { existsSync, renameSync } from "fs";
 import { filePathIsSafe } from "./utils/filepath-is-safe";
 import { Settings } from "../../settings";
-import { updateThumbnailCache } from "../../utils/update-thumbnail-cache";
+import { updateThumbnailCache } from "./utils/update-thumbnail-cache";
 
 export const uploadFilesEndpoint =
   (settings: Settings): RequestHandler =>
@@ -35,8 +35,8 @@ export const uploadFilesEndpoint =
       }
 
       while (true) {
-        const fileinameCandidate = `${filename}${i > 0 ? `-${i}` : ""}${ext}`;
-        const filePath = `${settings.webroot}/content/${path}/${fileinameCandidate}`;
+        const filenameCandidate = `${filename}${i > 0 ? `-${i}` : ""}${ext}`;
+        const filePath = `${settings.webroot}/content/${path}/${filenameCandidate}`;
         if (!filePathIsSafe(settings, filePath)) {
           res.status(400).json({ error: "Invalid file path" });
           return;

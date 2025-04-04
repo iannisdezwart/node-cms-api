@@ -1,7 +1,7 @@
 import { createHash } from "crypto";
 import * as fs from "fs";
 import * as graphicsMagick from "gm";
-import { Settings } from "../settings";
+import { Settings } from "../../../settings";
 
 const imageMagick = graphicsMagick.subClass({ imageMagick: true });
 

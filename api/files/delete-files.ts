@@ -1,8 +1,8 @@
 import { RequestHandler } from "express";
 import { Settings } from "../../settings";
 import { filePathIsSafe } from "./utils/filepath-is-safe";
-import { updateThumbnailCache } from "../../utils/update-thumbnail-cache";
 import { rmSync } from "fs";
+import { updateThumbnailCache } from "./utils/update-thumbnail-cache";
 
 export const deleteFilesEndpoint =
   (settings: Settings): RequestHandler =>

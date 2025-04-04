@@ -2,8 +2,8 @@ import { Request, Response } from "express";
 import { cpSync, renameSync } from "fs";
 import { resolve } from "path";
 import { Settings } from "../../../settings";
-import { updateThumbnailCache } from "../../../utils/update-thumbnail-cache";
 import { filePathIsSafe } from "./filepath-is-safe";
+import { updateThumbnailCache } from "./update-thumbnail-cache";
 
 export const modifyMultipleFiles = (
   settings: Settings,
