@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
-import { DbService } from "../../db/db-service";
-import { Settings } from "../../settings";
-import { compile } from "./utils/compile";
+import { DbService } from "../../db/db-service.js";
+import { Settings } from "../../settings.js";
+import { compileSite } from "./utils/compile-site.js";
 
 export const deletePageEndpoint =
   (settings: Settings, dbService: DbService): RequestHandler =>
@@ -9,7 +9,7 @@ export const deletePageEndpoint =
     const { id } = req.body;
 
     // Validate input.
-    if (!id) {
+    if (id === undefined) {
       res.status(400).json({ error: "ID is required" });
       return;
     }
@@ -23,7 +23,7 @@ export const deletePageEndpoint =
 
     if ("pageId" in deletePageResult) {
       // Compile the website and stream the output to the client.
-      compile(settings, res);
+      compileSite(settings, dbService, res);
       return;
     }
 

@@ -1,6 +1,6 @@
 import bcrypt from "bcrypt";
 import { Database } from "better-sqlite3";
-import { Settings } from "../settings";
+import { Settings } from "../settings.js";
 
 export const init = (db: Database, settings: Settings) => {
   db.transaction(() => {
@@ -13,7 +13,7 @@ export const init = (db: Database, settings: Settings) => {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           username TEXT NOT NULL UNIQUE,
           password TEXT NOT NULL,
-          level TEXT NOT NULL,
+          level TEXT NOT NULL
         )
         `
       )
@@ -30,7 +30,7 @@ export const init = (db: Database, settings: Settings) => {
         VALUES ('root', ?, 'root')
         `
       )
-      .run(bcrypt.hashSync("", settings.bcrypt.rounds));
+      .run(bcrypt.hashSync("", settings.bcryptRounds));
     if (res.changes > 0) {
       console.log("🤵👤🌱 Root user created");
     }
@@ -44,8 +44,7 @@ export const init = (db: Database, settings: Settings) => {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL UNIQUE,
           template TEXT NOT NULL,
-          can_add INTEGER NOT NULL CHECK (can_add IN (0, 1)),
-          compile INTEGER NOT NULL CHECK (compile IN (0, 1))
+          kind INTEGER NOT NULL CHECK (kind IN (0, 1, 2))
         )
         `
       )

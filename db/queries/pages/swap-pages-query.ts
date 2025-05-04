@@ -7,46 +7,61 @@ export const swapPagesQuery = (
   db: Database,
   swaps: [number, number][]
 ): RetVal => {
-  try {
-    return db.transaction((): RetVal => {
-      for (const [orderingIdxA, orderingIdxB] of swaps) {
-        if (!checkOrderingIdxExists(db, orderingIdxA)) {
-          throw new Error("OrderingIdxNotFound");
-        }
-        if (!checkOrderingIdxExists(db, orderingIdxB)) {
-          throw new Error("OrderingIdxNotFound");
-        }
-
-        const updatePageRes = db
-          .prepare(
-            /* sql */
-            `
-            UPDATE pages
-            SET ordering = CASE
-              WHEN ordering = ? THEN ?
-              WHEN ordering = ? THEN ?
-            END
-            WHERE ordering IN (?, ?)
-            `
-          )
-          .run(
-            orderingIdxA,
-            orderingIdxB,
-            orderingIdxB,
-            orderingIdxA,
-            orderingIdxA,
-            orderingIdxB
-          );
-        if (updatePageRes.changes !== 2) {
-          throw new Error("DatabaseUpdateError");
-        }
+  return db.transaction((): RetVal => {
+    for (const [orderingIdxA, orderingIdxB] of swaps) {
+      if (!checkOrderingIdxExists(db, orderingIdxA)) {
+        return { error: "OrderingIdxNotFound" };
       }
 
-      return {};
-    })();
-  } catch (error) {
-    return { error: error.message as Err };
-  }
+      if (!checkOrderingIdxExists(db, orderingIdxB)) {
+        return { error: "OrderingIdxNotFound" };
+      }
+
+      let updateRes = db
+        .prepare(
+          /* sql */
+          `
+          UPDATE pages
+          SET ordering = -1
+          WHERE ordering = ?
+          `
+        )
+        .run(orderingIdxA);
+      if (updateRes.changes !== 1) {
+        throw new Error("DatabaseUpdateError");
+      }
+
+      updateRes = db
+        .prepare(
+          /* sql */
+          `
+          UPDATE pages
+          SET ordering = ?
+          WHERE ordering = ?
+          `
+        )
+        .run(orderingIdxA, orderingIdxB);
+      if (updateRes.changes !== 1) {
+        throw new Error("DatabaseUpdateError");
+      }
+
+      updateRes = db
+        .prepare(
+          /* sql */
+          `
+          UPDATE pages
+          SET ordering = ?
+          WHERE ordering = -1
+          `
+        )
+        .run(orderingIdxB);
+      if (updateRes.changes !== 1) {
+        throw new Error("DatabaseUpdateError");
+      }
+    }
+
+    return {};
+  })();
 };
 
 const checkOrderingIdxExists = (db: Database, orderingIdx: number): boolean => {
@@ -54,13 +69,14 @@ const checkOrderingIdxExists = (db: Database, orderingIdx: number): boolean => {
     .prepare(
       /* sql */
       `
-      SELECT COUNT(ordering) FROM pages WHERE ordering = ?
+      SELECT COUNT(ordering) AS count FROM pages WHERE ordering = ?
       `
     )
     .get(orderingIdx) as { count: number } | undefined;
-  if (ordering === undefined) {
+  if (ordering === undefined || ordering.count !== 1) {
+    console.warn(`⚠️🔢❌ Ordering index ${orderingIdx} not found.`);
     return false;
   }
 
-  return ordering.count === 1;
+  return true;
 };

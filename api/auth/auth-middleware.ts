@@ -1,5 +1,5 @@
 import { RequestHandler } from "express";
-import { AccessTokenService } from "../../jwt/jwt-service";
+import { AccessTokenService } from "../../jwt/jwt-service.js";
 
 export const authMiddleware =
   (jwtService: AccessTokenService): RequestHandler =>

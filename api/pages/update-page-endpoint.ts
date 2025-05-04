@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
-import { DbService } from "../../db/db-service";
-import { Settings } from "../../settings";
-import { compile } from "./utils/compile";
+import { DbService } from "../../db/db-service.js";
+import { Settings } from "../../settings.js";
+import { compileSite } from "./utils/compile-site.js";
 
 export const updatePageEndpoint =
   (settings: Settings, dbService: DbService): RequestHandler =>
@@ -9,7 +9,7 @@ export const updatePageEndpoint =
     const { id, content } = req.body;
 
     // Validate input.
-    if (!id || !content) {
+    if (id === undefined || content === undefined) {
       res.status(400).json({ error: "ID and content are required" });
       return;
     }
@@ -17,8 +17,8 @@ export const updatePageEndpoint =
       res.status(400).json({ error: "ID must be a number" });
       return;
     }
-    if (typeof content !== "string") {
-      res.status(400).json({ error: "Content must be a string" });
+    if (typeof content !== "object") {
+      res.status(400).json({ error: "Content must be an object" });
       return;
     }
 
@@ -27,7 +27,7 @@ export const updatePageEndpoint =
 
     if ("pageId" in updatePageResult) {
       // Compile the website and stream the output to the client.
-      compile(settings, res);
+      compileSite(settings, dbService, res);
       return;
     }
 

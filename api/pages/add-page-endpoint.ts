@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
-import { DbService } from "../../db/db-service";
-import { Settings } from "../../settings";
-import { compile } from "./utils/compile";
+import { DbService } from "../../db/db-service.js";
+import { Settings } from "../../settings.js";
+import { compileSite } from "./utils/compile-site.js";
 
 export const addPageEndpoint =
   (settings: Settings, dbService: DbService): RequestHandler =>
@@ -9,7 +9,7 @@ export const addPageEndpoint =
     const { type, content } = req.body;
 
     // Validate input.
-    if (!type || !content) {
+    if (type === undefined || content === undefined) {
       res.status(400).json({ error: "Type and content are required" });
       return;
     }
@@ -17,14 +17,8 @@ export const addPageEndpoint =
       res.status(400).json({ error: "Type must be a string" });
       return;
     }
-    if (typeof content !== "string") {
-      res.status(400).json({ error: "Content must be a string" });
-      return;
-    }
-    try {
-      JSON.parse(content);
-    } catch {
-      res.status(400).json({ error: "Content must be valid JSON" });
+    if (typeof content !== "object") {
+      res.status(400).json({ error: "Content must be an object" });
       return;
     }
 
@@ -33,7 +27,7 @@ export const addPageEndpoint =
 
     if ("pageId" in addPageResult) {
       // Compile the website and stream the output to the client.
-      compile(settings, res);
+      compileSite(settings, dbService, res);
       return;
     }
 

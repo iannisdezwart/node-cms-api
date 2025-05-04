@@ -1,5 +1,6 @@
 import { Database } from "better-sqlite3";
-import { contentMatchesTemplate } from "./utils/page-type-template";
+import { contentMatchesTemplate } from "./utils/page-type-template.js";
+import { PageContent } from "../../types/page.js";
 
 type Err = "PageTypeNotFound" | "TemplateMismatch" | "DatabaseUpdateError";
 type RetVal = { pageId: number } | { error: Err };
@@ -7,7 +8,7 @@ type RetVal = { pageId: number } | { error: Err };
 export const updatePageQuery = (
   db: Database,
   id: number,
-  content: string
+  content: PageContent
 ): RetVal =>
   db.transaction((): RetVal => {
     let pageTypeRes = db
@@ -37,7 +38,7 @@ export const updatePageQuery = (
         WHERE id = ?
         `
       )
-      .run(content, id);
+      .run(JSON.stringify(content), id);
     if (updatePageRes.changes === 0) {
       return { error: "DatabaseUpdateError" };
     }

@@ -1,5 +1,5 @@
 import { Database } from "better-sqlite3";
-import { User } from "../../types/user";
+import { User } from "../../types/user.js";
 
 type Err = "DatabaseGetError";
 type RetVal = { user: User } | { error: Err };

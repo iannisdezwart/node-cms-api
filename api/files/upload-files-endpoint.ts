@@ -1,17 +1,19 @@
 import { RequestHandler } from "express";
-import { existsSync, renameSync } from "fs";
-import { filePathIsSafe } from "./utils/filepath-is-safe";
-import { Settings } from "../../settings";
-import { updateThumbnailCache } from "./utils/update-thumbnail-cache";
+import { existsSync, renameSync, unlinkSync } from "fs";
+import { Settings } from "../../settings.js";
+import { filePathIsSafe } from "./utils/filepath-is-safe.js";
+import { updateThumbnailCache } from "./utils/update-thumbnail-cache.js";
+import { join, resolve } from "path";
+import { findNonConflictingPath } from "./utils/find-non-conflicting-path.js";
 
 export const uploadFilesEndpoint =
   (settings: Settings): RequestHandler =>
   (req, res) => {
     const files = req.files;
-    const { path } = req.body;
+    let { path } = req.body;
 
     // Validate input.
-    if (!files || !Array.isArray(files) || files.length === 0) {
+    if (files === undefined || !Array.isArray(files) || files.length === 0) {
       res.status(400).json({ error: "No files uploaded" });
       return;
     }
@@ -19,35 +21,36 @@ export const uploadFilesEndpoint =
       res.status(400).json({ error: "Path must be a string" });
       return;
     }
+    path = resolve(join(settings.webroot, "content", path));
+    if (!filePathIsSafe(settings, path)) {
+      res.status(400).json({ error: "Invalid file path" });
+      return;
+    }
 
     // Process files.
+    const resolvedSources = [];
+    const resolvedDestinations = [];
     for (const file of files) {
-      let i = 0;
-      const extSeparator = file.originalname.lastIndexOf(".");
-      let filename: string;
-      let ext: string;
-      if (extSeparator === -1) {
-        filename = file.originalname;
-        ext = "";
-      } else {
-        filename = file.originalname.slice(0, extSeparator);
-        ext = file.originalname.slice(extSeparator);
+      const nonConflictingPathRes = findNonConflictingPath(
+        settings,
+        file.originalname,
+        path,
+        false
+      );
+      if (!nonConflictingPathRes.ok) {
+        res.status(400).json({ error: nonConflictingPathRes.reason });
+        cleanup(files);
+        return;
       }
 
-      while (true) {
-        const filenameCandidate = `${filename}${i > 0 ? `-${i}` : ""}${ext}`;
-        const filePath = `${settings.webroot}/content/${path}/${filenameCandidate}`;
-        if (!filePathIsSafe(settings, filePath)) {
-          res.status(400).json({ error: "Invalid file path" });
-          return;
-        }
-        if (existsSync(filePath)) {
-          i++;
-          continue;
-        }
+      resolvedSources.push(file.path);
+      resolvedDestinations.push(nonConflictingPathRes.path);
+    }
 
-        renameSync(file.path, filePath);
-      }
+    for (let i = 0; i < resolvedSources.length; i++) {
+      const sourcePath = resolvedSources[i];
+      const destinationFilePath = resolvedDestinations[i];
+      renameSync(sourcePath, destinationFilePath);
     }
 
     updateThumbnailCache(settings);
@@ -55,3 +58,16 @@ export const uploadFilesEndpoint =
     // Send response.
     res.json({ message: "Files uploaded successfully" });
   };
+
+const cleanup = (files: Express.Multer.File[]) => {
+  for (const file of files) {
+    try {
+      unlinkSync(file.path);
+    } catch (error) {
+      console.error(
+        `⚠️📄🗑️ Failed to delete uploaded file: ${file.path}`,
+        error
+      );
+    }
+  }
+};

@@ -1,9 +1,8 @@
+import { PageCompiler } from "./web/compile.js";
+
 export type Settings = {
-  bcrypt: {
-    rounds: number;
-  };
-  compile: {
-    script: string;
-  };
+  bcryptRounds: number;
   webroot: string;
+  pageCompilers: Record<string, PageCompiler>;
+  dependencies?: Record<string, string[]>;
 };

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+	<head>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" href="/admin-panel/docs/css/index.css">
+		<script defer src="/admin-panel/docs/js/index.js" charset="utf-8"></script>
+		<title>File actions | NodeCMS Documentation</title>
+	</head>
+	<body>
+		<h1>NodeCMS Documentation</h1>
+
+		<h2 class="title"><a href="/admin-panel/docs">Home</a> > <a href="/admin-panel/docs/file-management.html">File Management</a> > File actions</h2>
+
+		<h2 id="summary">Summary</h2>
+
+		<img src="/admin-panel/docs/img/file-management-file-buttons.png" alt="File buttons">
+
+		<p>
+			There are four file/folder action buttons, which can be found on the right side of each file/folder in the file table (see the image above). If you use a small screen, you might have to scroll the table to the right to see the buttons.
+			<br><br>
+			<b>Note that</b> you will not see any buttons if there are no files or folders in the folder you currently are in.
+			<br><br>
+			What each of the buttons does is described thoroughly below:
+		</p>
+
+		<h2 id="detailed-description">Detailed description of the file buttons</h2>
+
+		<h3 id="copy-button">"Copy" button</h3>
+
+		<p>
+			The "Copy" button is used for copying a file (or a folder) from one folder to another.
+			It does the same as the <a href="#move-button">"Move" button</a>, except copying keeps the original file, whereas moving removes the original.
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-copy-button.png" alt="Image of the &quot;copy&quot; button">
+
+		<p>
+			When you click on the "Copy" button, you will see a popup like this:
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-copy-popup.png" alt="Image of the copy popup">
+
+		<p>
+			First select a folder by clicking on it. In this example I will copy a file to the "My Folder" folder.
+			<br>
+			(Optionally, you could change the file name of the copied file below "Fill in the name of the file".)
+			<br>
+			Then click on "Select folder". Now the file will get copied and you will get a confirmation popup message like this:
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-copy-success.png" alt="Image of the copy confirmation message">
+
+		<h3 id="move-button">"Move" button</h3>
+
+		<p>
+			The "Move" button is used for moving a file (or a folder) from one folder to another. It does the same as the <a href="#copy-button">"Copy" button</a>, except moving removes the original file, whereas copying keeps the original.
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-move-button.png" alt="Image of the &quot;move&quot; button">
+
+		<p>
+			When you click on the "Move" button, you will see a popup like this:
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-move-popup.png" alt="Image of the move popup">
+
+		<p>
+			First select a folder by clicking on it. In this example I will move a file to the "My Folder" folder.
+			<br>
+			(Optionally, you could change the file name of the moved file below "Fill in the name of the file".)
+			<br>
+			Then click on "Select folder". Now the file will get moved and you will get a confirmation popup message like this:
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-move-success.png" alt="Image of the move confirmation message">
+
+		<p>
+			Be careful not to move any files which are currently used on pages of your website, as the affected pages will not load their content correctly if done insecurely.
+			<br>
+			If you really want to move a file that is used on your pages,
+		</p>
+
+		<ol>
+			<li><a href="#copy-button">Copy</a> the file to the new desired location</li>
+			<li>Change all references to the file by <a href="/admin-panel/docs/how-to-edit-a-page.html">editing</a> all pages that have references in the <a href="/admin-panel/docs/page-management.html">page manager</a></li>
+			<li><a href="#delete-button">Delete</a> the original file</li>
+		</ol>
+
+		<h3 id="rename-button">"Rename" button</h3>
+
+		<p>
+			The "Rename" button is used to rename a file or folder.
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-rename-button.png" alt="Image of the &quot;rename&quot; button">
+
+		<p>
+			When you click on the "Rename" button, you will see a popup like this:
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-rename-popup.png" alt="Image of the rename popup">
+
+		<p>
+			First select a folder by clicking on it. In this example I will rename the file "video.mp4" to "drone-footage.mp4".
+			<br>
+			Enter the new name and then click on "Rename". Now the file will get renamed and you will get a confirmation popup message like this:
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-rename-success.png" alt="Image of the rename confirmation message">
+
+		<p>
+			Be careful not to rename a folder which contains files that are currently used on the pages of your website, as the affected pages will not load their content correctly if done insecurely.
+			<br>
+			If you really want to rename a file that is used on one of your pages,
+		</p>
+
+		<ol>
+			<li><a href="#copy-button">Copy</a> the file to the same folder, but under a different name</li>
+			<li>Change all references to the file by <a href="/admin-panel/docs/how-to-edit-a-page.html">editing</a> all pages that have references in the <a href="/admin-panel/docs/page-management.html">page manager</a></li>
+			<li><a href="#delete-button">Delete</a> the original file</li>
+		</ol>
+
+		<h3 id="delete-button">"Delete" button</h3>
+
+		<p>
+			The "Delete" button is used to permanently delete a file or folder (including all its content).
+			<br>
+			<b>Warning</b>: this action cannot be undone.
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-delete-button.png" alt="Image of the &quot;delete&quot; button">
+
+		<p>
+			When you click on the "Delete" button, you will see a popup like this:
+		</p>
+
+		<img src="/admin-panel/docs/img/file-management-delete-popup.png" alt="Image of the delete popup">
+
+		<p>
+			Click on the "Delete" button of this popup if you are sure you want to delete the file. You will not get a confirmation popup message.
+		</p>
+
+		<p>
+			Be careful not to delete a file or a folder which contains files that are currently used on the pages of your website, as the affected pages will not load the deleted content anymore.
+		</p>
+
+		<h2 id="more">More on file management</h2>
+
+		<ul>
+			<li><a href="/admin-panel/docs/file-management.html">File management</a></li>
+			<li><a href="/admin-panel/docs/how-to-use-the-folder-buttons.html">How to use the folder action buttons</a></li>
+		</ul>
+	</body>
+</html>

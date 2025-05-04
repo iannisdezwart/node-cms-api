@@ -1,6 +1,5 @@
 import { RequestHandler } from "express";
-import { DbService } from "../../db/db-service";
-import { Settings } from "../../settings";
+import { DbService } from "../../db/db-service.js";
 
 export const getPagesEndpoint =
   (dbService: DbService): RequestHandler =>

@@ -1,7 +1,7 @@
 import { RequestHandler } from "express";
-import { DbService } from "../../db/db-service";
-import { Settings } from "../../settings";
-import { compile } from "./utils/compile";
+import { DbService } from "../../db/db-service.js";
+import { Settings } from "../../settings.js";
+import { compileSite } from "./utils/compile-site.js";
 
 export const swapPagesEndpoint =
   (settings: Settings, dbService: DbService): RequestHandler =>
@@ -9,7 +9,7 @@ export const swapPagesEndpoint =
     const { swaps } = req.body;
 
     // Validate input.
-    if (!swaps || !Array.isArray(swaps)) {
+    if (swaps === undefined || !Array.isArray(swaps)) {
       res.status(400).json({ error: "Swaps must be an array" });
       return;
     }
@@ -52,6 +52,6 @@ export const swapPagesEndpoint =
     }
 
     // Compile the website and stream the output to the client.
-    compile(settings, res);
+    compileSite(settings, dbService, res);
     return;
   };

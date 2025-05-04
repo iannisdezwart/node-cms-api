@@ -1,18 +1,18 @@
 import { Router } from "express";
-import { DbService } from "../db/db-service";
-import { AccessTokenService } from "../jwt/jwt-service";
-import { authRouter } from "./auth/router";
-import { authMiddleware } from "./auth/auth-middleware";
-import { pagesRouter } from "./pages/router";
-import { Settings } from "../settings";
-import { filesRouter } from "./files/router";
-import { usersRouter } from "./users/routes";
+import { DbService } from "../db/db-service.js";
+import { AccessTokenService } from "../jwt/jwt-service.js";
+import { Settings } from "../settings.js";
+import { authMiddleware } from "./auth/auth-middleware.js";
+import { authRouter } from "./auth/router.js";
+import { filesRouter } from "./files/router.js";
+import { pagesRouter } from "./pages/router.js";
+import { usersRouter } from "./users/router.js";
 
 export const apiRouter = (
   settings: Settings,
   dbService: DbService,
   jwtService: AccessTokenService
-) => {
+): Router => {
   const checkAuth = authMiddleware(jwtService);
   return Router()
     .use("/auth", authRouter(dbService, jwtService))

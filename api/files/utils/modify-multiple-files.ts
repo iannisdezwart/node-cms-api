@@ -1,9 +1,10 @@
 import { Request, Response } from "express";
 import { cpSync, renameSync } from "fs";
-import { resolve } from "path";
-import { Settings } from "../../../settings";
-import { filePathIsSafe } from "./filepath-is-safe";
-import { updateThumbnailCache } from "./update-thumbnail-cache";
+import { join, parse, resolve } from "path";
+import { Settings } from "../../../settings.js";
+import { filePathIsSafe } from "./filepath-is-safe.js";
+import { updateThumbnailCache } from "./update-thumbnail-cache.js";
+import { findNonConflictingPath } from "./find-non-conflicting-path.js";
 
 export const modifyMultipleFiles = (
   settings: Settings,
@@ -22,24 +23,38 @@ export const modifyMultipleFiles = (
     res.status(400).json({ error: "No sources provided" });
     return;
   }
-  const destinationPath = resolve(`${settings.webroot}/content${destination}`);
+  const destinationPath = resolve(
+    join(settings.webroot, "content", destination)
+  );
   if (!filePathIsSafe(settings, destinationPath)) {
     res.status(400).json({ error: "Invalid destination path" });
     return;
   }
 
   // Modify files.
+  const resolvedSources = [];
+  const resolvedDestinations = [];
   for (const source of sources as string[]) {
-    const sourcePath = resolve(`${settings.webroot}/content${source}`);
-    const sourceFilename = source.slice(source.lastIndexOf("/") + 1);
-    const destinationFilePath = resolve(`${destinationPath}/${sourceFilename}`);
-    if (
-      !filePathIsSafe(settings, sourcePath) ||
-      !filePathIsSafe(settings, destinationFilePath)
-    ) {
-      res.status(400).json({ error: "Invalid file path" });
+    const resolvedSource = resolve(join(settings.webroot, "content", source));
+    if (parse(resolvedSource).dir == destinationPath) {
+      res.status(400).json({ error: "Source and destination are the same" });
       return;
     }
+    const nonConflictingPathRes = findNonConflictingPath(
+      settings,
+      resolvedSource,
+      destinationPath
+    );
+    if (!nonConflictingPathRes.ok) {
+      res.status(400).json({ error: nonConflictingPathRes.reason });
+      return;
+    }
+    resolvedSources.push(resolvedSource);
+    resolvedDestinations.push(nonConflictingPathRes.path);
+  }
+  for (let i = 0; i < resolvedSources.length; i++) {
+    const sourcePath = resolvedSources[i];
+    const destinationFilePath = resolvedDestinations[i];
     if (mode == "move") {
       renameSync(sourcePath, destinationFilePath);
     } else {

@@ -1,8 +1,9 @@
 import { Request, Response } from "express";
 import { cpSync, renameSync } from "fs";
-import { Settings } from "../../../settings";
-import { filePathIsSafe } from "./filepath-is-safe";
-import { updateThumbnailCache } from "./update-thumbnail-cache";
+import { Settings } from "../../../settings.js";
+import { filePathIsSafe } from "./filepath-is-safe.js";
+import { updateThumbnailCache } from "./update-thumbnail-cache.js";
+import { join, resolve } from "path";
 
 export const modifySingleFile = (
   settings: Settings,
@@ -13,12 +14,18 @@ export const modifySingleFile = (
   const { source, destination } = req.body;
 
   // Validate input.
-  if (typeof source !== "string" || typeof destination !== "string") {
-    res.status(400).json({ error: "Invalid input" });
+  if (source === undefined || destination === undefined) {
+    res.status(400).json({ error: "Source and destination are required" });
     return;
   }
-  const sourcePath = `${settings.webroot}/content${source}`;
-  const destinationPath = `${settings.webroot}/content${destination}`;
+  if (typeof source !== "string" || typeof destination !== "string") {
+    res.status(400).json({ error: "Invalid input types" });
+    return;
+  }
+  const sourcePath = resolve(join(settings.webroot, "content", source));
+  const destinationPath = resolve(
+    join(settings.webroot, "content", destination)
+  );
   if (
     !filePathIsSafe(settings, sourcePath) ||
     !filePathIsSafe(settings, destinationPath)

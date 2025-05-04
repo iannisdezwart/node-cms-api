@@ -1,22 +1,22 @@
 import { Router } from "express";
 import multer, { diskStorage } from "multer";
-import { Settings } from "../../settings";
-import { modifyFilesEndpoint } from "./modify-files";
-import { deleteFilesEndpoint } from "./delete-files";
-import { listFilesEndpoint } from "./list-files";
-import { makeDirectoryEndpoint } from "./make-directory";
-import { uploadFilesEndpoint } from "./upload-files-endpoint";
+import { Settings } from "../../settings.js";
+import { deleteFilesEndpoint } from "./delete-files-endpoint.js";
+import { listFilesEndpoint } from "./list-files-endpoint.js";
+import { makeDirectoryEndpoint } from "./make-directory-endpoint.js";
+import { modifyFilesEndpoint } from "./modify-files-endpoint.js";
+import { uploadFilesEndpoint } from "./upload-files-endpoint.js";
 
-export const filesRouter = (settings: Settings) => {
+export const filesRouter = (settings: Settings): Router => {
   const upload = multer({
     storage: diskStorage({
-      destination: (_, __, cb) => cb(null, "./uploads/"),
+      destination: (_, __, cb) => cb(null, "/tmp/uploads/"),
       filename: (_, file, cb) => cb(null, `${Date.now()}-${file.originalname}`),
     }),
   });
 
   return Router()
-    .get("/", listFilesEndpoint(settings))
+    .get("/*", listFilesEndpoint(settings))
     .post("/", upload.any(), uploadFilesEndpoint(settings))
     .delete("/", deleteFilesEndpoint(settings))
     .patch("/", modifyFilesEndpoint(settings))

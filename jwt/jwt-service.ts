@@ -22,7 +22,6 @@ export const getAccessTokenService = (): AccessTokenService => {
         {
           username,
           level,
-          aud: "node-cms-admin-panel",
         },
         secret,
         {

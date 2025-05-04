@@ -1,9 +1,11 @@
+import { PageContent } from "../../../types/page";
+import { PageTemplate } from "../../../types/page-type";
+
 export const contentMatchesTemplate = (
   templateStr: string,
-  contentStr: string
+  content: PageContent
 ): boolean => {
-  const template = JSON.parse(templateStr);
-  const content = JSON.parse(contentStr);
+  const template = JSON.parse(templateStr) as PageTemplate;
 
   const visited = new Set<string>();
   for (const templateKey of Object.keys(template)) {

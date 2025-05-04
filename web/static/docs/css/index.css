@@ -1,0 +1,61 @@
+* {
+	font-family: Arial, Helvetica, sans-serif;
+}
+
+:root {
+	--max-page-width: 80ch;
+}
+
+body {
+	box-sizing: border-box;
+}
+
+dfn {
+	border-bottom: 1px dashed;
+}
+
+h1 {
+	font-size: 2.5em;
+}
+
+h2 {
+	font-size: 2em;
+}
+
+h2.title {
+	font-style: italic;
+	text-decoration: underline;
+}
+
+p {
+	max-width: var(--max-page-width);
+}
+
+[id] {
+	width: fit-content;
+	max-width: calc(100% - 3em);
+	word-break: break-word;
+	position: relative;
+	pointer-events: none;
+}
+
+[id]::after {
+	content: '🔗';
+	position: absolute;
+	right: -2em;
+	cursor: pointer;
+	pointer-events: all;
+}
+
+.highlighted {
+	background-color: yellow;
+}
+
+ol > li {
+	padding-left: 1em;
+}
+
+img {
+	/* max-width: 100%; */
+	max-width: min(100%, var(--max-page-width));
+}
