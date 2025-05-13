@@ -45,7 +45,7 @@ export const modifyMultipleFiles = (
       resolvedSource,
       destinationPath
     );
-    if (!nonConflictingPathRes.ok) {
+    if (nonConflictingPathRes.ok === false) {
       res.status(400).json({ error: nonConflictingPathRes.reason });
       return;
     }

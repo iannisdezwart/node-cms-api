@@ -37,7 +37,7 @@ export const uploadFilesEndpoint =
         path,
         false
       );
-      if (!nonConflictingPathRes.ok) {
+      if (nonConflictingPathRes.ok === false) {
         res.status(400).json({ error: nonConflictingPathRes.reason });
         cleanup(files);
         return;

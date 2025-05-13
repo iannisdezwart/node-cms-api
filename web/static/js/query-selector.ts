@@ -12,11 +12,11 @@ interface Element {
 Element.prototype.$ = function <T extends HTMLElement = HTMLElement>(
   query: string
 ) {
-  return this.querySelector<T>(query)!;
+  return (this as Element).querySelector<T>(query)!;
 };
 
 Element.prototype.$a = function <T extends HTMLElement = HTMLElement>(
   query: string
 ) {
-  return Array.from(this.querySelectorAll<T>(query));
+  return Array.from((this as Element).querySelectorAll<T>(query));
 };
