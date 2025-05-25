@@ -224,7 +224,13 @@ const evaluatePageChange = (
   settings: Settings
 ): PageChange => {
   const hash = createHash("md5")
-    .update(JSON.stringify(page.content))
+    .update(
+      JSON.stringify({
+        type: pageType.name,
+        content: page.content,
+        id: page.id,
+      })
+    )
     .digest("hex");
   const compiledPage = compiledPages.find((p) => p.page_id === page.id);
   const changed =
