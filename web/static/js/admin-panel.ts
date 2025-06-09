@@ -730,7 +730,7 @@ const pageTemplateInputToHTML = (
       return /* html */ `
       <div class="element-group" root="${!nested}" data-input="${inputName}">
         ${reduceArray(
-          inputContent as any[],
+          (inputContent as any[]) || [],
           (el, i) => /* html */ `
         <div class="element-group-item">
           <div class="content">
@@ -974,14 +974,16 @@ const editVideoPath = async (buttonEl: HTMLButtonElement) => {
       extensions: videoExtensions,
     },
     false
-  ).catch(() => {
-    throw new Error(`User cancelled`);
-  });
+  );
+
+  if (!newVideoPath.ok) {
+    return;
+  }
 
   // Update the old video.
   const videoEl = buttonEl.parentElement!.$<HTMLVideoElement>("video");
-  videoEl.setAttribute("data-path", `/content${newVideoPath}`);
-  videoEl.src = `/content${newVideoPath}`;
+  videoEl.setAttribute("data-path", `/content${newVideoPath.result}`);
+  videoEl.src = `/content${newVideoPath.result}`;
 };
 
 /*
@@ -1004,7 +1006,10 @@ const isChildOf = (child: HTMLElement, parent: HTMLElement) => {
 const collectInput = (input: HTMLElement, inputType: ContentType) => {
   switch (inputType) {
     default: {
-      const itemEls = input.$a<HTMLDivElement>(".element-group-item");
+      const childEls = [].slice.call(input.children) as HTMLElement[];
+      const itemEls = childEls.filter((pot) =>
+        pot.classList.contains("element-group-item")
+      );
       const out = [];
 
       for (let i = 0; i < itemEls.length; i++) {
@@ -1195,17 +1200,19 @@ const editImg = async (buttonEl: HTMLButtonElement) => {
       extensions,
     },
     false
-  ).catch(() => {
-    throw new Error(`User cancelled`);
-  });
+  );
+
+  if (!newImgPath.ok) {
+    return;
+  }
 
   // Update the old image.
   // TODO: show loader while image is loading.
   const imgEl =
     buttonEl.parentElement!.parentElement!.$<HTMLImageElement>(".img")!;
 
-  imgEl.setAttribute("data-path", `/content${newImgPath}`);
-  imgEl.src = `/content${newImgPath}`;
+  imgEl.setAttribute("data-path", `/content${newImgPath.result}`);
+  imgEl.src = `/content${newImgPath.result}`;
 };
 
 // 3.7.3 Delete Image

@@ -41,7 +41,7 @@ export const listFilesEndpoint =
     for (const file of dir) {
       const filePath = join(resolvedPath, file);
       const stats = statSync(filePath);
-      const hash = createHash("md5").update(resolve(filePath)).digest("hex");
+      const hash = createHash("md5").update(join(path, file)).digest("hex");
 
       files.push({
         name: file,
