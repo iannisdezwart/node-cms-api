@@ -1,5 +1,5 @@
 import { Database } from "better-sqlite3";
-import { CompiledPage, CompiledPageEntry } from "../../types/compiled-page.js";
+import { CompiledPageEntry } from "../../types/compiled-page.js";
 
 type Err = "DatabaseInsertError";
 type RetVal = { addedCount: number } | { error: Err };
