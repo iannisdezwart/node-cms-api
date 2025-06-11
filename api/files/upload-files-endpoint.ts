@@ -1,10 +1,10 @@
 import { RequestHandler } from "express";
-import { existsSync, renameSync, unlinkSync } from "fs";
-import { Settings } from "../../settings.js";
-import { filePathIsSafe } from "./utils/filepath-is-safe.js";
-import { updateThumbnailCache } from "./utils/update-thumbnail-cache.js";
+import { renameSync, unlinkSync } from "fs";
 import { join, resolve } from "path";
+import { Settings } from "../../settings.js";
+import { filePathInContentDir } from "./utils/filepath-is-safe.js";
 import { findNonConflictingPath } from "./utils/find-non-conflicting-path.js";
+import { updateThumbnailCache } from "./utils/update-thumbnail-cache.js";
 
 export const uploadFilesEndpoint =
   (settings: Settings): RequestHandler =>
@@ -22,7 +22,7 @@ export const uploadFilesEndpoint =
       return;
     }
     path = resolve(join(settings.webroot, "content", path));
-    if (!filePathIsSafe(settings, path)) {
+    if (!filePathInContentDir(settings, path)) {
       res.status(400).json({ error: "Invalid file path" });
       return;
     }

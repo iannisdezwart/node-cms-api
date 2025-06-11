@@ -32,6 +32,11 @@ export const updatePageEndpoint =
     }
 
     switch (updatePageResult.error) {
+      case "PageNotFound":
+        res.status(404).json({
+          error: `Page with ID ${id} not found.`,
+        });
+        return;
       case "PageTypeNotFound":
         res.status(500).json({
           error: `Page type not found.`,

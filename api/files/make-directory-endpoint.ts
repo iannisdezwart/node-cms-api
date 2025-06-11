@@ -1,8 +1,8 @@
 import { RequestHandler } from "express";
 import { mkdirSync } from "fs";
-import { Settings } from "../../settings.js";
-import { filePathIsSafe } from "./utils/filepath-is-safe.js";
 import { join, resolve } from "path";
+import { Settings } from "../../settings.js";
+import { filePathInContentDir } from "./utils/filepath-is-safe.js";
 
 export const makeDirectoryEndpoint =
   (settings: Settings): RequestHandler =>
@@ -19,7 +19,7 @@ export const makeDirectoryEndpoint =
       return;
     }
     path = resolve(join(settings.webroot, "content", path));
-    if (!filePathIsSafe(settings, path)) {
+    if (!filePathInContentDir(settings, path)) {
       res.status(400).json({ error: "Invalid file path" });
       return;
     }

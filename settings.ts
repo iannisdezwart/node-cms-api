@@ -1,8 +1,9 @@
-import { PageCompiler } from "./web/compile.js";
+import { PageTypeHandler } from "./web/page-type-handler";
 
 export type Settings = {
   bcryptRounds: number;
   webroot: string;
-  pageCompilers: Record<string, PageCompiler>;
+  pageTypeHandlers: Record<string, PageTypeHandler<any>>;
+  langs: string[];
   dependencies?: Record<string, string[]>;
 };

@@ -22,14 +22,12 @@
     3.3 Add Page
     3.4 Delete Page
     3.5 Page Template Input To HTML
-      3.5.1 Generate .img-array-img Element
+      3.5.1 Generate Image Input
       3.5.2 Edit Video Path
+      3.5.3 Toggle Text Input Language
     3.6 Collect Page Template Inputs
-    3.7 img[] Functions
-      3.7.1 Move Image
-      3.7.2 Edit Image
-      3.7.3 Delete Image
-      3.7.4 Add Image
+    3.7 Image Input Functions
+      3.7.1 Edit Image
     3.8 Element Group Functions
       3.8.1 Move Group
       3.8.2 Delete Group
@@ -90,7 +88,6 @@ window.onload = async () => {
 
 type PageTypeKind = "list" | "single" | "virtual";
 type PageType = {
-  id: number;
   name: string;
   template: PageTemplate;
   kind: PageTypeKind;
@@ -100,14 +97,12 @@ type PageTemplate = Record<string, ContentType>;
 
 type GroupItem = {
   name: string;
-  type: ContentType | GroupItem[];
+  type: ContentType;
 };
 
 type ContentType =
   | "string"
   | "text"
-  | "img[]"
-  | "img_caption[]"
   | "img"
   | "svg"
   | "video"
@@ -120,15 +115,21 @@ type Page = {
   id: number;
   ordering: number;
   page_type: string;
-  page_type_id: number;
   content: PageContent;
 };
 
-type PageContent = Record<string, any>;
+type PageContent = Record<string, ContentValue>;
+type ContentValue =
+  | Record<string /* langKey */, string>
+  | string
+  | number
+  | boolean
+  | PageContent[];
 
 type PageStore = {
   pages: Page[];
   pageTypes: PageType[];
+  langs: string[];
 };
 
 declare namespace tinymce {
@@ -163,7 +164,7 @@ const reloadTinyMCE = () => {
 
 const initTinyMCE = () => {
   tinymce.init({
-    selector: "textarea",
+    selector: "textarea.tiny-mce",
     plugins:
       "advlist autolink link image lists charmap preview anchor pagebreak searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media nonbreaking table emoticons help",
     toolbar:
@@ -182,15 +183,13 @@ const initTinyMCE = () => {
 
 */
 
-type FetchPagesResult =
-  | { ok: false; pageStore: undefined }
-  | { ok: true; pageStore: PageStore };
+type FetchPagesResult = { ok: false } | { ok: true; pageStore: PageStore };
 
 const fetchPages = async (): Promise<FetchPagesResult> => {
   const res = await makeRequest("/admin-panel/api/pages", "GET");
   if (!res.ok) {
     handleRequestError(res);
-    return { ok: false, pageStore: undefined };
+    return { ok: false };
   }
   return { ok: true, pageStore: res.body };
 };
@@ -365,12 +364,12 @@ let pageSwaps: [number, number][];
 
 const showPages = async () => {
   showLoader();
-  const { ok, pageStore } = await fetchPages();
-  if (!ok) {
+  const res = await fetchPages();
+  if (!res.ok) {
     return;
   }
 
-  const { pages, pageTypes } = pageStore;
+  const { pages, pageTypes, langs } = res.pageStore;
   pageSwaps = [];
 
   $(".main").innerHTML = /* html */ `
@@ -417,7 +416,11 @@ const showPages = async () => {
                   <td class="col-page-name">
                     ${
                       pageType.kind === "list"
-                        ? `${"&nbsp;".repeat(8)} > ${page.content.title}`
+                        ? `${"&nbsp;".repeat(8)} > ${
+                            (page.content.title as Record<string, string>)[
+                              langs[0]
+                            ]
+                          }`
                         : captitalise(pageType.name)
                     }
                   </td>
@@ -515,20 +518,26 @@ const showPages = async () => {
 
 */
 
+let globalLangs: string[] = [];
+
 const editPage = async (id: number) => {
   showLoader();
 
-  const { ok, pageStore } = await fetchPages();
-  if (!ok) {
+  const res = await fetchPages();
+  if (!res.ok) {
     return;
   }
 
-  const page = pageStore.pages.find((p) => p.id == id)!;
-  const { template, kind } = pageStore.pageTypes.find(
+  const page = res.pageStore.pages.find((p) => p.id == id)!;
+  globalLangs = res.pageStore.langs;
+  const { template, kind } = res.pageStore.pageTypes.find(
     (p) => p.name == page.page_type
   )!;
 
-  const pageTitle = kind === "list" ? page.content.title : page.page_type;
+  const pageTitle =
+    kind === "list"
+      ? (page.content.title as Record<string, string>)[globalLangs[0]]
+      : page.page_type;
 
   $(".main").innerHTML = /* html */ `
   <h1>Editing page "${pageTitle}"</h1>
@@ -593,12 +602,13 @@ const editPage = async (id: number) => {
 const addPage = async (pageType: string) => {
   showLoader();
 
-  const { ok, pageStore } = await fetchPages();
-  if (!ok) {
+  const res = await fetchPages();
+  if (!res.ok) {
     return;
   }
 
-  const { template } = pageStore.pageTypes.find((p) => p.name == pageType)!;
+  const { template } = res.pageStore.pageTypes.find((p) => p.name == pageType)!;
+  globalLangs = res.pageStore.langs;
 
   $(".main").innerHTML = /* html */ `
   <h1>Creating new page of type "${pageType}"</h1>
@@ -631,9 +641,10 @@ const addPage = async (pageType: string) => {
       handleRequestError(res);
       return;
     }
+    const title = pageContent.title as Record<string, string> | undefined;
     notification(
       "Added page",
-      `Successfully added page "${pageContent.title}"!`
+      `Successfully added page "${title?.[globalLangs[0]] || pageType}"!`
     );
 
     showPages();
@@ -655,15 +666,22 @@ const addPage = async (pageType: string) => {
 const deletePage = async (id: number) => {
   showLoader();
 
-  const { ok, pageStore } = await fetchPages();
-  if (!ok) {
+  const pagesRes = await fetchPages();
+  if (!pagesRes.ok) {
     return;
   }
 
-  const page = pageStore.pages.find((p) => p.id == id)!;
-  const { kind } = pageStore.pageTypes.find((p) => p.name == page.page_type)!;
+  const page = pagesRes.pageStore.pages.find((p) => p.id == id)!;
+  const { kind } = pagesRes.pageStore.pageTypes.find(
+    (p) => p.name == page.page_type
+  )!;
 
-  const pageTitle = kind === "list" ? page.content.title : page.page_type;
+  const pageTitle =
+    kind === "list"
+      ? (page.content.title as Record<string, string>)[
+          pagesRes.pageStore.langs[0]
+        ]
+      : page.page_type;
 
   await popup(
     `Deleting page "${pageTitle}"`,
@@ -681,7 +699,7 @@ const deletePage = async (id: number) => {
     "page-id": id.toFixed(),
   });
 
-  const res = await showCompilationProgress(
+  const compilationRes = await showCompilationProgress(
     await makeRequest(
       "/admin-panel/api/pages",
       "DELETE",
@@ -691,8 +709,8 @@ const deletePage = async (id: number) => {
       { stream: true }
     )
   );
-  if (res?.ok === false) {
-    handleRequestError(res);
+  if (compilationRes?.ok === false) {
+    handleRequestError(compilationRes);
     return;
   }
 
@@ -714,8 +732,6 @@ const pageTemplateInputToHTML = (
   inputContent: any,
   nested = false
 ): string => {
-  console.log(inputType, inputName, inputContent, nested);
-
   switch (inputType) {
     default: {
       if (!Array.isArray(inputType)) {
@@ -732,41 +748,41 @@ const pageTemplateInputToHTML = (
         ${reduceArray(
           (inputContent as any[]) || [],
           (el, i) => /* html */ `
-        <div class="element-group-item">
-          <div class="content">
-            ${reduceArray(
-              inputType,
-              (group) => /* html */ `
-              <h3>${group.name}:</h3>
-              ${pageTemplateInputToHTML(
-                group.type,
-                group.name,
-                el[group.name],
-                true
+          <div class="element-group-item">
+            <div class="content">
+              ${reduceArray(
+                inputType,
+                (group) => /* html */ `
+                <h3>${group.name}:</h3>
+                ${pageTemplateInputToHTML(
+                  group.type,
+                  group.name,
+                  el[group.name],
+                  true
+                )}
+                `
               )}
-              `
-            )}
+            </div>
+            <br>
+            <button class="small red" onclick="deleteGroup(this)">Delete</button>
+
+            ${
+              i != 0
+                ? /* html */ `
+                <button class="small move-group-button up" onclick="moveGroup(this, 'up')">Move up</button>
+                `
+                : ""
+            }
+
+            ${
+              i != inputContent.length - 1
+                ? /* html */ `
+                <button class="small move-group-button down" onclick="moveGroup(this, 'down')">Move down</button>
+                `
+                : ""
+            }
           </div>
-          <br>
-          <button class="small red" onclick="deleteGroup(this)">Delete</button>
-
-          ${
-            i != 0
-              ? /* html */ `
-              <button class="small move-group-button up" onclick="moveGroup(this, 'up')">Move up</button>
-              `
-              : ""
-          }
-
-          ${
-            i != inputContent.length - 1
-              ? /* html */ `
-              <button class="small move-group-button down" onclick="moveGroup(this, 'down')">Move down</button>
-              `
-              : ""
-          }
-        </div>
-        `
+          `
         )}
         <button class="small" onclick="addGroup(this, ${inputTypeIndex})">Add</button>
       </div>
@@ -774,79 +790,65 @@ const pageTemplateInputToHTML = (
     }
 
     case "text": {
-      const value = inputContent
-        ? (inputContent as string).replace(/"/g, "&quot;")
-        : "";
-
       return /* html */ `
-      <div class="tinymce-container" root="${!nested}" data-input="${inputName}">
-        <textarea>
-          ${value}
-        </textarea>
+      <div root="${!nested}" data-input="${inputName}">
+        ${makeLanguageSwitcher(globalLangs)}
+        <br>
+        ${globalLangs
+          .map((lang) => [
+            lang,
+            htmlEncode(inputContent ? inputContent[lang] ?? "" : ""),
+          ])
+          .map(
+            ([lang, value], i) => /* html */ `
+            <div
+              lang="${lang}"
+              class="text-container"
+              style="display: ${i === 0 ? "block" : "none"}"
+            >
+              <textarea class="tiny-mce">${value}</textarea>
+            </div>
+            `
+          )
+          .join("")}
       </div>
       `;
     }
 
     case "string": {
-      const value = inputContent
-        ? (inputContent as string).replace(/"/g, "&quot;")
-        : "";
-
       return /* html */ `
-      <input root="${!nested}" data-input="${inputName}" type="text" value="${value}" />
-      `;
-    }
-
-    case "img[]": {
-      const imgs = inputContent ? (inputContent as string[]) : [];
-
-      return /* html */ `
-      <div class="img-array" root="${!nested}" data-input="${inputName}">
-        ${reduceArray(imgs, (img, i) =>
-          generateImgArrayImg(img, i != 0, i != imgs.length - 1)
-        )}
-        <div class="img-array-plus" onclick="addImg('${inputName}')"></div>
-      </div>
-      `;
-    }
-
-    case "img_caption[]": {
-      const imgsAndCaptions = inputContent
-        ? (inputContent as [string, string][])
-        : [];
-
-      return /* html */ `
-      <div class="img-array" root="${!nested}" data-input="${inputName}">
-        ${reduceArray(imgsAndCaptions, (imgAndCaption, i) =>
-          generateImgAndCaptionArrayInstance(
-            imgAndCaption,
-            i != 0,
-            i != imgsAndCaptions.length - 1
+      <div root="${!nested}" data-input="${inputName}">
+        ${makeLanguageSwitcher(globalLangs)}
+        <br>
+        ${globalLangs
+          .map((lang) => [
+            lang,
+            htmlEncode(inputContent ? inputContent[lang] ?? "" : ""),
+          ])
+          .map(
+            ([lang, value], i) => /* html */ `
+            <div
+              lang="${lang}"
+              class="text-container"
+              style="display: ${i === 0 ? "block" : "none"}"
+            >
+              <textarea>${value}</textarea>
+            </div>
+            `
           )
-        )}
-        <div class="img-array-plus" onclick="addImg('${inputName}', true)"></div>
+          .join("")}
       </div>
       `;
     }
 
     case "img": {
       const img = inputContent ? (inputContent as string) : "";
-
-      return /* html */ `
-      <div class="img-array" root="${!nested}" data-input="${inputName}">
-        ${generateImgArrayImg(img, false, false)}
-      </div>
-      `;
+      return generateImgInput(img, nested, inputName);
     }
 
     case "svg": {
       const img = inputContent ? (inputContent as string) : "";
-
-      return /* html */ `
-      <div class="img-array" root="${!nested}" data-input="${inputName}" data-extensions="svg">
-        ${generateImgArrayImg(img, false, false)}
-      </div>
-      `;
+      return generateImgInput(img, nested, inputName, ["svg"]);
     }
 
     case "video": {
@@ -894,70 +896,51 @@ const pageTemplateInputToHTML = (
       `;
     }
   }
+
+  function htmlEncode(str: string): string {
+    return str.replace(
+      /[\u00A0-\u9999<>\&]/gim,
+      (i) => "&#" + i.charCodeAt(0) + ";"
+    );
+  }
+
+  function makeLanguageSwitcher(langs: string[]) {
+    return langs.length > 1
+      ? /* html */ `
+      <select onchange="toggleLang(this)">
+        ${langs
+          .map(
+            (lang, i) => /* html */ `
+            <option value="${lang}" ${i === 0 ? "selected" : ""}>
+              ${lang}
+            </option>
+            `
+          )
+          .join("")}
+      </select>
+      `
+      : "";
+  }
 };
 
-// 3.5.1 Generate .img-array-img Element
+// 3.5.1 Generate Image Input
 
-const generateImgArrayImg = (
+const generateImgInput = (
   imgSrc: string,
-  hasLeftArrow: boolean,
-  hasRightArrow: boolean
+  nested: boolean,
+  inputName: string,
+  extensions?: string[]
 ) => /* html */ `
-<div class="img-array-img">
-  <div class="img-array-img-options">
+<div
+  class="img-input"
+  root="${!nested}"
+  data-input="${inputName}"
+  data-extensions="${extensions ? extensions.join(",") : ""}"
+>
+  <div class="img-input-options">
     <button class="small light" onclick="editImg(this)">Edit</button>
-    <button class="small light red" onclick="deleteImg(this)">Delete</button>
   </div>
-  <div class="img-array-img-arrows">
-    ${
-      hasLeftArrow
-        ? /* html */ `
-        <img class="arrow-left" src="/admin-panel/img/arrow-left.png" alt="arrow-left" onclick="moveImg('left', this)">
-        `
-        : ""
-    }
-    ${
-      hasRightArrow
-        ? /* html */ `
-        <img class="arrow-right" src="/admin-panel/img/arrow-right.png" alt="arrow-right" onclick="moveImg('right', this)">
-        `
-        : ""
-    }
-  </div>
-  <img class="img" data-path="${imgSrc}" src="${imgSrc}">
-</div>
-`;
-
-const generateImgAndCaptionArrayInstance = (
-  imgAndCaption: [string, string],
-  hasLeftArrow: boolean,
-  hasRightArrow: boolean
-) => /* html */ `
-<div class="img-array-img img-caption-array-img">
-  <div class="img-array-img-options">
-    <button class="small light" onclick="editImg(this)">Edit</button>
-    <button class="small light red" onclick="deleteImg(this)">Delete</button>
-  </div>
-  <div class="img-array-img-arrows">
-    ${
-      hasLeftArrow
-        ? /* html */ `
-        <img class="arrow-left" src="/admin-panel/img/arrow-left.png" alt="arrow-left" onclick="moveImgWithCaption('left', this)">
-        `
-        : ""
-    }
-    ${
-      hasRightArrow
-        ? /* html */ `
-        <img class="arrow-right" src="/admin-panel/img/arrow-right.png" alt="arrow-right" onclick="moveImgWithCaption('right', this)">
-        `
-        : ""
-    }
-  </div>
-  <img class="img" data-path="${imgAndCaption[0]}" src="${imgAndCaption[0]}">
-  <br>
-  <input class="caption" type="text"
-    value="${imgAndCaption[1]}" placeholder="caption" />
+  <img data-path="${imgSrc}" src="${imgSrc}">
 </div>
 `;
 
@@ -986,6 +969,27 @@ const editVideoPath = async (buttonEl: HTMLButtonElement) => {
   videoEl.src = `/content${newVideoPath.result}`;
 };
 
+// 3.5.3 Toggle Text Input Language
+
+const toggleLang = (selectEl: HTMLSelectElement) => {
+  const parentEl = selectEl.parentElement!;
+  const textContainers = [].slice.call(
+    parentEl.querySelectorAll(".text-container")
+  ) as HTMLElement[];
+  const selectedLang = selectEl.value;
+
+  for (const textContainer of textContainers) {
+    textContainer.style.display = "none";
+  }
+
+  const selectedTextContainer = textContainers.find(
+    (textContainer) => textContainer.getAttribute("lang") == selectedLang
+  );
+  if (selectedTextContainer) {
+    selectedTextContainer.style.display = "block";
+  }
+};
+
 /*
 
   3.6 Collect Page Template Inputs
@@ -1003,7 +1007,10 @@ const isChildOf = (child: HTMLElement, parent: HTMLElement) => {
   return false;
 };
 
-const collectInput = (input: HTMLElement, inputType: ContentType) => {
+const collectInput = (
+  input: HTMLElement,
+  inputType: ContentType
+): ContentValue => {
   switch (inputType) {
     default: {
       const childEls = [].slice.call(input.children) as HTMLElement[];
@@ -1034,49 +1041,45 @@ const collectInput = (input: HTMLElement, inputType: ContentType) => {
     }
 
     case "text": {
-      return tinyMCE
-        .get()
-        .filter((editor) => isChildOf(editor.editorContainer, input))[0]
-        .getContent();
+      const textContainers = [].slice.call(
+        input.querySelectorAll(".text-container")
+      ) as HTMLElement[];
+      return Object.fromEntries(
+        textContainers.map((textContainer) => [
+          textContainer.getAttribute("lang"),
+          tinyMCE
+            .get()
+            .filter((editor) =>
+              isChildOf(editor.editorContainer, textContainer)
+            )[0]
+            .getContent(),
+          textContainer.querySelector("textarea")!.value.trim(),
+        ])
+      );
     }
 
     case "string": {
-      return (input as HTMLInputElement).value.trim();
-    }
-
-    case "img[]": {
-      const out = [];
-      const imgs = input.$a<HTMLImageElement>(".img");
-
-      for (let i = 0; i < imgs.length; i++) {
-        out[i] = imgs[i].getAttribute("data-path");
-      }
-
-      return out;
-    }
-
-    case "img_caption[]": {
-      const out = [];
-      const imgs = input.$a<HTMLImageElement>(".img");
-      const captions = input.$a<HTMLInputElement>(".caption");
-
-      for (let j = 0; j < imgs.length; j++) {
-        out[j] = [imgs[j].getAttribute("data-path"), captions[j].value];
-      }
-
-      return out;
+      const textContainers = [].slice.call(
+        input.querySelectorAll(".text-container")
+      ) as HTMLElement[];
+      return Object.fromEntries(
+        textContainers.map((textContainer) => [
+          textContainer.getAttribute("lang"),
+          textContainer.querySelector("textarea")!.value.trim(),
+        ])
+      );
     }
 
     case "img": {
-      return input.$<HTMLImageElement>(".img")!.getAttribute("data-path");
+      return input.$<HTMLImageElement>("img")!.getAttribute("data-path")!;
     }
 
     case "svg": {
-      return input.$<HTMLImageElement>(".img")!.getAttribute("data-path");
+      return input.$<HTMLImageElement>("img")!.getAttribute("data-path")!;
     }
 
     case "video": {
-      return input.$<HTMLVideoElement>("video")!.getAttribute("data-path");
+      return input.$<HTMLVideoElement>("video")!.getAttribute("data-path")!;
     }
 
     case "date": {
@@ -1110,74 +1113,11 @@ const collectInputs = (template: PageTemplate) => {
 
 /*
 
-  3.7 img[] Functions
+  3.7 Image Functions
 
 */
 
-// 3.7.1 Move Image
-
-const moveImg = async (
-  direction: "left" | "right",
-  arrowEl: HTMLImageElement
-) => {
-  const imgArrayImgEl = arrowEl.parentElement!.parentElement!;
-
-  // Swap images visually.
-  // Get the first image element that has to move.
-  const imgEl1 = imgArrayImgEl.$<HTMLImageElement>(".img")!;
-
-  // Get the other image element.
-  const imgEl2 =
-    direction == "left"
-      ? imgArrayImgEl.previousElementSibling!.$<HTMLImageElement>(".img")!
-      : imgArrayImgEl.nextElementSibling!.$<HTMLImageElement>(".img")!;
-
-  // Swap the images.
-  imgEl2.parentElement!.appendChild(imgEl1);
-  imgArrayImgEl.appendChild(imgEl2);
-};
-
-const moveImgWithCaption = async (
-  direction: "left" | "right",
-  arrowEl: HTMLImageElement
-) => {
-  const imgArrayImgEl = arrowEl.parentElement!.parentElement!;
-
-  // Swap images visually.
-  // Get the first image element and save its path.
-  const imgEl1 = imgArrayImgEl.$<HTMLImageElement>(".img")!;
-  const imgSource1 = imgEl1.getAttribute("data-path")!;
-
-  // Get the first caption.
-  const captionEl1 = imgArrayImgEl.$<HTMLInputElement>(".caption")!;
-  const captionValue1 = captionEl1.value;
-
-  // Get the other image element and save its path.
-  const imgEl2 =
-    direction == "left"
-      ? imgArrayImgEl.previousElementSibling!.$<HTMLImageElement>(".img")!
-      : imgArrayImgEl.nextElementSibling!.$<HTMLImageElement>(".img")!;
-  const imgSource2 = imgEl2.getAttribute("data-path")!;
-
-  // Get the other caption.
-  const captionEl2 =
-    direction == "left"
-      ? imgArrayImgEl.previousElementSibling!.$<HTMLInputElement>(".caption")!
-      : imgArrayImgEl.nextElementSibling!.$<HTMLInputElement>(".caption")!;
-  const captionValue2 = captionEl2!.value;
-
-  // Swap the images.
-  imgEl1.src = imgSource2;
-  imgEl1.setAttribute("data-path", imgSource2);
-  imgEl2.src = imgSource1;
-  imgEl2.setAttribute("data-path", imgSource1);
-
-  // Swap the captions.
-  captionEl1.value = captionValue2;
-  captionEl2.value = captionValue1;
-};
-
-// 3.7.2 Edit Image
+// 3.7.1 Edit Image
 
 const editImg = async (buttonEl: HTMLButtonElement) => {
   // Get the possible extensions.
@@ -1209,104 +1149,10 @@ const editImg = async (buttonEl: HTMLButtonElement) => {
   // Update the old image.
   // TODO: show loader while image is loading.
   const imgEl =
-    buttonEl.parentElement!.parentElement!.$<HTMLImageElement>(".img")!;
+    buttonEl.parentElement!.parentElement!.$<HTMLImageElement>("img")!;
 
   imgEl.setAttribute("data-path", `/content${newImgPath.result}`);
   imgEl.src = `/content${newImgPath.result}`;
-};
-
-// 3.7.3 Delete Image
-
-const deleteImg = async (buttonEl: HTMLButtonElement) => {
-  const imgArrayImgEl = buttonEl.parentElement!.parentElement!;
-
-  // Get left and right imgs (which can be null).
-  const leftImgEl = imgArrayImgEl.previousElementSibling;
-  const rightImgEl = imgArrayImgEl.nextElementSibling;
-
-  // Remove the image.
-  imgArrayImgEl.remove();
-
-  // Update the arrows of the left and right imgs if necessary.
-  if (leftImgEl == null) {
-    rightImgEl!.$(".arrow-left")!.remove();
-  }
-
-  if (rightImgEl != null) {
-    if (!rightImgEl.classList.contains("img-array-img")) {
-      leftImgEl!.$(".arrow-right")!.remove();
-    }
-  }
-};
-
-// 3.7.4 Add Image
-
-const addImg = async (inputName: string, withCaption = false) => {
-  // Select new images.
-  const filePickerRes = await filePicker(
-    {
-      type: "file",
-      title: "Add image",
-      body: "Select a new image",
-      buttonText: "Select",
-      extensions: imageExtensions,
-    },
-    true
-  );
-  if (!filePickerRes.ok) {
-    return;
-  }
-
-  const newImgPaths = filePickerRes.result as string[];
-
-  const imgArrayPlus = $(/**/ `[data-input="${inputName}"`).$<HTMLDivElement>(
-    ".img-array-plus"
-  )!;
-
-  // Add the images before it.
-  if (!withCaption) {
-    imgArrayPlus.insertAdjacentHTML(
-      "beforebegin",
-      newImgPaths
-        .map((newImgPath) =>
-          generateImgArrayImg(
-            `/content${newImgPath}`,
-            imgArrayPlus.previousElementSibling != null,
-            false
-          )
-        )
-        .join("")
-    );
-  } else {
-    imgArrayPlus.insertAdjacentHTML(
-      "beforebegin",
-      newImgPaths
-        .map((newImgPath) =>
-          generateImgAndCaptionArrayInstance(
-            [`/content${newImgPath}`, ""],
-            imgArrayPlus.previousElementSibling != null,
-            false
-          )
-        )
-        .join("")
-    );
-  }
-
-  // Add a right arrow to the previous image if it exists.
-  const prevImgArrayImg =
-    imgArrayPlus.previousElementSibling!.previousElementSibling!;
-
-  if (prevImgArrayImg != null && !withCaption) {
-    prevImgArrayImg.$(".img-array-img-arrows")!.innerHTML += /* html */ `
-    <img class="arrow-right" src="/admin-panel/img/arrow-right.png" alt="arrow-right" onclick="moveImg('right', this)">
-    `;
-  }
-
-  if (prevImgArrayImg != null && withCaption) {
-    prevImgArrayImg.$(".img-array-img-arrows")!.innerHTML += /* html */ `
-    <img class="arrow-right" src="/admin-panel/img/arrow-right.png" alt="arrow-right" onclick="moveImgWithCaption('right', this)">
-    `;
-  }
 };
 
 /*
@@ -1394,9 +1240,9 @@ const addGroup = (buttonEl: HTMLButtonElement, inputTypeIndex: number) => {
         ${reduceArray(
           inputType,
           (group) => /* html */ `
-        <h3>${group.name}:</h3>
-        ${pageTemplateInputToHTML(group.type, group.name, null, true)}
-        `
+          <h3>${group.name}:</h3>
+          ${pageTemplateInputToHTML(group.type, group.name, null, true)}
+          `
         )}
       </div>
       <br>
@@ -1676,16 +1522,19 @@ function filePicker<T extends boolean>(
           li.classList.add("selected");
           li.setAttribute("data-selected", "true");
 
-          const hoverChangeEvent = new CustomEvent("selectionchange", {
-            detail: {
-              newlySelected: li,
-            },
-          });
+          const hoverChangeEvent = new CustomEvent(
+            "FileListItemSelectionChange",
+            {
+              detail: {
+                newlySelected: li,
+              },
+            }
+          );
 
           dispatchEvent(hoverChangeEvent);
 
           addEventListener(
-            "selectionchange",
+            "FileListItemSelectionChange",
             (e: CustomEventInit<{ newlySelected: HTMLLIElement }>) => {
               if (e.detail!.newlySelected != li && !multiple) {
                 li.classList.remove("selected");

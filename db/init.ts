@@ -40,28 +40,10 @@ export const init = (db: Database, settings: Settings) => {
         /* sql */
         `
         CREATE TABLE IF NOT EXISTS
-        page_types (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL UNIQUE,
-          template TEXT NOT NULL,
-          kind INTEGER NOT NULL CHECK (kind IN (0, 1, 2))
-        )
-        `
-      )
-      .run();
-    if (res.changes > 0) {
-      console.log("🗄️📜🌱 Page types table created");
-    }
-
-    res = db
-      .prepare(
-        /* sql */
-        `
-        CREATE TABLE IF NOT EXISTS
         pages (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           ordering INTEGER NOT NULL UNIQUE,
-          page_type_id INTEGER NOT NULL REFERENCES page_types(id),
+          page_type TEXT NOT NULL,
           content TEXT NOT NULL
         )
         `

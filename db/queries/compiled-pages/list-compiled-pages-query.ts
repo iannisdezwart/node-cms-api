@@ -4,7 +4,7 @@ import { CompiledPage } from "../../types/compiled-page.js";
 type Err = "DatabaseGetError";
 type RetVal = { compiledPages: CompiledPage[] } | { error: Err };
 
-export const getCompiledPagesQuery = (db: Database): RetVal => {
+export const listCompiledPagesQuery = (db: Database): RetVal => {
   const compiledPages = db
     .prepare(
       /* sql */

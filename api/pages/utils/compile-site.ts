@@ -3,7 +3,7 @@ import { DbService } from "../../../db/db-service.js";
 import { Settings } from "../../../settings.js";
 import { compile } from "../../../web/compile.js";
 
-export const compileSite = (
+export const compileSite = async (
   settings: Settings,
   dbService: DbService,
   res: Response
@@ -11,7 +11,7 @@ export const compileSite = (
   res.setHeader("Content-Type", "application/jsonl");
 
   try {
-    compile(settings, dbService, (msg) => {
+    await compile(settings, dbService, (msg) => {
       res.write(JSON.stringify({ type: "out", data: msg }) + "\n");
     });
   } catch (err) {

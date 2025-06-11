@@ -1,9 +1,9 @@
 import { RequestHandler } from "express";
 import { rmSync } from "fs";
-import { Settings } from "../../settings.js";
-import { filePathIsSafe } from "./utils/filepath-is-safe.js";
-import { updateThumbnailCache } from "./utils/update-thumbnail-cache.js";
 import { join, resolve } from "path";
+import { Settings } from "../../settings.js";
+import { filePathInContentDir } from "./utils/filepath-is-safe.js";
+import { updateThumbnailCache } from "./utils/update-thumbnail-cache.js";
 
 export const deleteFilesEndpoint =
   (settings: Settings): RequestHandler =>
@@ -27,7 +27,7 @@ export const deleteFilesEndpoint =
       }
       const resolvedPath = resolve(join(settings.webroot, "content", path));
       paths[i] = resolvedPath;
-      if (!filePathIsSafe(settings, resolvedPath)) {
+      if (!filePathInContentDir(settings, resolvedPath)) {
         res.status(400).json({ error: "Invalid file path" });
         return;
       }

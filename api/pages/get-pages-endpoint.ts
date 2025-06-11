@@ -1,8 +1,9 @@
 import { RequestHandler } from "express";
 import { DbService } from "../../db/db-service.js";
+import { Settings } from "../../settings.js";
 
 export const getPagesEndpoint =
-  (dbService: DbService): RequestHandler =>
+  (settings: Settings, dbService: DbService): RequestHandler =>
   (req, res) => {
     const getPagesResult = dbService.pages.list();
 
@@ -14,5 +15,15 @@ export const getPagesEndpoint =
       return;
     }
 
-    res.status(200).json(getPagesResult);
+    res.status(200).json({
+      pages: getPagesResult.pages,
+      pageTypes: Object.entries(settings.pageTypeHandlers).map(
+        ([name, handler]) => ({
+          name,
+          template: handler.template,
+          kind: handler.kind,
+        })
+      ),
+      langs: settings.langs,
+    });
   };

@@ -1,7 +1,7 @@
-import { join, parse } from "path";
-import { filePathIsSafe } from "./filepath-is-safe";
 import { existsSync } from "fs";
+import { join, parse } from "path";
 import { Settings } from "../../../settings";
+import { filePathInContentDir } from "./filepath-is-safe";
 
 type FindNonConflictingPathOutput =
   | {
@@ -25,8 +25,8 @@ export const findNonConflictingPath = (
     const filenameCandidate = `${name}${i > 0 ? `-${i}` : ""}${ext}`;
     const path = join(destinationDirPath, filenameCandidate);
     if (
-      !filePathIsSafe(settings, path) ||
-      (checkSourceFile && !filePathIsSafe(settings, sourceFileName))
+      !filePathInContentDir(settings, path) ||
+      (checkSourceFile && !filePathInContentDir(settings, sourceFileName))
     ) {
       return {
         ok: false,

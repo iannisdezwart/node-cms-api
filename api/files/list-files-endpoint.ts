@@ -3,7 +3,7 @@ import { RequestHandler } from "express";
 import { readdirSync, statSync } from "fs";
 import { join, resolve } from "path";
 import { Settings } from "../../settings.js";
-import { filePathIsSafe } from "./utils/filepath-is-safe.js";
+import { filePathInContentDir } from "./utils/filepath-is-safe.js";
 
 type FileInfo = {
   name: string;
@@ -30,7 +30,7 @@ export const listFilesEndpoint =
       return;
     }
     const resolvedPath = resolve(join(settings.webroot, "content", path));
-    if (!filePathIsSafe(settings, resolvedPath)) {
+    if (!filePathInContentDir(settings, resolvedPath)) {
       res.status(400).json({ error: "Invalid file path" });
       return;
     }

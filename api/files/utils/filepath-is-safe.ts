@@ -1,18 +1,23 @@
-import { join, resolve } from "path";
+import { resolve } from "path";
 import { Settings } from "../../../settings.js";
 
-export const filePathIsSafe = (settings: Settings, path: string): boolean => {
+const filePathWithinDir = (path: string, dir: string): boolean => {
   const resolvedPath = resolve(path);
-  const contentDir = resolve(settings.webroot, "content");
+  const resolvedDir = resolve(dir);
   if (
-    resolvedPath !== contentDir &&
-    !resolvedPath.startsWith(contentDir + "/")
+    resolvedPath !== resolvedDir &&
+    !resolvedPath.startsWith(resolvedDir + "/")
   ) {
     console.log(
-      `📂📄🚨 Unsafe file path: ${resolvedPath}, not in ${contentDir}`
+      `📂🚨 Unsafe file path: ${resolvedPath}, not in ${resolvedDir}`
     );
     return false;
   }
-
   return true;
 };
+
+export const filePathInWebroot = (settings: Settings, path: string) =>
+  filePathWithinDir(path, settings.webroot);
+
+export const filePathInContentDir = (settings: Settings, path: string) =>
+  filePathWithinDir(path, resolve(settings.webroot, "content"));

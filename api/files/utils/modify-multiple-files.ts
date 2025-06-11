@@ -2,9 +2,9 @@ import { Request, Response } from "express";
 import { cpSync, renameSync } from "fs";
 import { join, parse, resolve } from "path";
 import { Settings } from "../../../settings.js";
-import { filePathIsSafe } from "./filepath-is-safe.js";
-import { updateThumbnailCache } from "./update-thumbnail-cache.js";
+import { filePathInContentDir } from "./filepath-is-safe.js";
 import { findNonConflictingPath } from "./find-non-conflicting-path.js";
+import { updateThumbnailCache } from "./update-thumbnail-cache.js";
 
 export const modifyMultipleFiles = (
   settings: Settings,
@@ -26,7 +26,7 @@ export const modifyMultipleFiles = (
   const destinationPath = resolve(
     join(settings.webroot, "content", destination)
   );
-  if (!filePathIsSafe(settings, destinationPath)) {
+  if (!filePathInContentDir(settings, destinationPath)) {
     res.status(400).json({ error: "Invalid destination path" });
     return;
   }

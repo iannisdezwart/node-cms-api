@@ -1,31 +1,41 @@
 import { Database } from "better-sqlite3";
-import { contentMatchesTemplate } from "./utils/page-type-template.js";
-import { PageContent } from "../../types/page.js";
+import { contentMatchesTemplate, PageContent } from "./utils/page-type-template.js";
+import { Settings } from "../../../settings.js";
 
-type Err = "PageTypeNotFound" | "TemplateMismatch" | "DatabaseUpdateError";
+type Err =
+  | "PageNotFound"
+  | "PageTypeNotFound"
+  | "TemplateMismatch"
+  | "DatabaseUpdateError";
 type RetVal = { pageId: number } | { error: Err };
 
 export const updatePageQuery = (
+  settings: Settings,
   db: Database,
   id: number,
   content: PageContent
 ): RetVal =>
   db.transaction((): RetVal => {
-    let pageTypeRes = db
+    const pageType = db
       .prepare(
         /* sql */
         `
-        SELECT template FROM page_types WHERE page_types.id = (
-          SELECT page_type_id FROM pages WHERE pages.id = ?
-        )
+        SELECT page_type FROM pages WHERE id = ?
         `
       )
-      .get(id) as { template: string } | undefined;
-    if (pageTypeRes === undefined) {
+      .pluck()
+      .get(id) as string | undefined;
+
+    if (pageType === undefined) {
+      return { error: "PageNotFound" };
+    }
+
+    const pageTypeHandler = settings.pageTypeHandlers[pageType];
+    if (pageTypeHandler === undefined) {
       return { error: "PageTypeNotFound" };
     }
 
-    if (!contentMatchesTemplate(pageTypeRes.template, content)) {
+    if (!contentMatchesTemplate(pageTypeHandler.template, content)) {
       return { error: "TemplateMismatch" };
     }
 

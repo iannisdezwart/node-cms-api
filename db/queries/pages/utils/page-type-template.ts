@@ -1,15 +1,66 @@
-import { PageContent } from "../../../types/page";
-import { PageTemplate } from "../../../types/page-type";
+export type PageTemplate = Record<string, ContentType>;
+export type PageTemplateWithTitle = PageTemplate & {
+  title: "string" | "text";
+};
+
+export type GroupItem = {
+  name: string;
+  type: ContentType;
+};
+
+export type ContentType =
+  | "string"
+  | "text"
+  | "img"
+  | "svg"
+  | "video"
+  | "date"
+  | "number"
+  | "bool"
+  | readonly GroupItem[];
+
+export type PageContent = Record<string, ContentValue>;
+export type Text = string | Record<string /* langKey */, string>;
+export type ContentValue = Text | string | number | boolean | PageContent[];
+
+export type TranslatedPageContent = Record<string, TranslatedContentValue>;
+export type TranslatedContentValue =
+  | string
+  | number
+  | boolean
+  | TranslatedPageContent[];
+
+export type ToTranslatedPageContentType<T extends PageTemplate> = {
+  [K in keyof T]: ContentTypeToTranslatedContentValue<T[K]>;
+};
+
+type ContentTypeToTranslatedContentValue<T> = T extends
+  | "string"
+  | "text"
+  | "img"
+  | "svg"
+  | "video"
+  | "number"
+  ? string
+  : T extends "date"
+  ? number
+  : T extends "bool"
+  ? boolean
+  : T extends readonly GroupItem[]
+  ? {
+      [I in T[number] as I["name"]]: ContentTypeToTranslatedContentValue<
+        I["type"]
+      >;
+    }[]
+  : never;
 
 export const contentMatchesTemplate = (
-  templateStr: string,
+  template: PageTemplate,
   content: PageContent
 ): boolean => {
-  const template = JSON.parse(templateStr) as PageTemplate;
-
   const visited = new Set<string>();
   for (const templateKey of Object.keys(template)) {
-    const contentType = template[templateKey] as string | undefined;
+    const contentType = template[templateKey];
     if (content[templateKey] === undefined) {
       return false;
     }
@@ -20,7 +71,7 @@ export const contentMatchesTemplate = (
   }
 
   for (const contentKey of Object.keys(content)) {
-    const contentType = template[contentKey] as string | undefined;
+    const contentType = template[contentKey];
     if (contentType === undefined) {
       return false;
     }
@@ -34,10 +85,19 @@ export const contentMatchesTemplate = (
   return true;
 };
 
-const contentValueMatchesType = (value: any, type: any): boolean => {
+const contentValueMatchesType = (
+  value: ContentValue,
+  type: ContentType
+): boolean => {
   switch (type) {
     case "string":
     case "text":
+      return (
+        typeof value === "object" &&
+        value !== null &&
+        !Array.isArray(value) &&
+        Object.values(value).every((v) => typeof v === "string")
+      );
     case "img":
     case "svg":
     case "video":
@@ -47,27 +107,14 @@ const contentValueMatchesType = (value: any, type: any): boolean => {
       return typeof value === "number";
     case "bool":
       return typeof value === "boolean";
-    case "img[]":
-      return Array.isArray(value) && value.every((v) => typeof v === "string");
-    case "img_and_caption[]":
-      return (
-        Array.isArray(value) &&
-        value.every(
-          (v) =>
-            Array.isArray(v) &&
-            v.length === 2 &&
-            typeof v[0] === "string" &&
-            typeof v[1] === "string"
-        )
-      );
     default:
       return valueIsValidGroupItem(type, value);
   }
 };
 
 const valueIsValidGroupItem = (
-  groupType: { name: string; type: any }[],
-  value: any
+  groupType: readonly GroupItem[],
+  value: ContentValue
 ): boolean => {
   if (!Array.isArray(value)) {
     return false;
@@ -79,13 +126,13 @@ const valueIsValidGroupItem = (
     }
 
     const visited = new Set<string>();
-    for (const key of Object.keys(item)) {
+    for (const [key, value] of Object.entries(item)) {
       const itemType = groupType.find((t) => t.name === key);
       if (!itemType) {
         return false;
       }
       visited.add(key);
-      if (!contentValueMatchesType(item[key], itemType.type)) {
+      if (!contentValueMatchesType(value, itemType.type)) {
         return false;
       }
     }

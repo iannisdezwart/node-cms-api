@@ -3,29 +3,26 @@ import {
   existsSync,
   mkdirSync,
   readdirSync,
-  rmdirSync,
-  statSync,
   unlinkSync,
   writeFileSync,
 } from "fs";
-import { join, resolve } from "path";
+import { join, parse, resolve } from "path";
+import { filePathInWebroot } from "../api/files/utils/filepath-is-safe.js";
 import { DbService } from "../db/db-service.js";
+import {
+  PageTemplate,
+  ToTranslatedPageContentType,
+} from "../db/queries/pages/utils/page-type-template.js";
 import { CompiledPage, CompiledPageEntry } from "../db/types/compiled-page.js";
 import { Settings } from "../settings.js";
 import { adminPageCompiler } from "./admin-panel-compiler.js";
+import {
+  ListPageTypeHandler,
+  PageTypeHandler,
+  SinglePageTypeHandler,
+} from "./page-type-handler.js";
+import { TranslatedPage, translatePages } from "./utils/translate.js";
 import { workOutDependencies } from "./utils/work-out-dependency-graph.js";
-import { PageType } from "../db/types/page-type.js";
-import { Page } from "../db/types/page.js";
-
-export type PageCompilerOutput = {
-  html: string;
-  path: string;
-};
-
-export type PageCompiler = (
-  pageContent: any,
-  allPages: Page[]
-) => Promise<PageCompilerOutput | undefined>;
 
 export const compile = async (
   settings: Settings,
@@ -34,20 +31,21 @@ export const compile = async (
 ) => {
   const startTime = Date.now();
   initWebroot(settings);
+  compileAdminPanel(settings);
 
-  const { pageTypes: unresolvedPageTypes, pages } = getPages(dbService);
   const compiledPages = getCompiledPages(dbService);
   const outdatedPagePaths = new Set<string>(compiledPages.map((p) => p.path));
   const updatedPageTypes = new Set<string>();
   const newlyCompiledPages: CompiledPageEntry[] = [];
 
-  const pageTypes = workOutDependencies(
-    settings.dependencies,
-    unresolvedPageTypes
-  );
-  for (const pageType of pageTypes) {
+  const pages = translatePages(settings, getPages(dbService));
+  const pageTypeHandlers = workOutDependencies(settings);
+  for (const [pageTypeName, pageTypeHandler] of Object.entries(
+    pageTypeHandlers
+  )) {
     await compilePageType(
-      pageType,
+      pageTypeName,
+      pageTypeHandler,
       pages,
       outdatedPagePaths,
       compiledPages,
@@ -57,7 +55,6 @@ export const compile = async (
       logger
     );
   }
-  compileAdminPanel(settings);
 
   removeOutdatedPages(settings, dbService, outdatedPagePaths, logger);
   addNewlyCompiledPages(dbService, newlyCompiledPages);
@@ -73,6 +70,9 @@ const initWebroot = (settings: Settings) => {
   if (!existsSync(join(settings.webroot, "content"))) {
     mkdirSync(join(settings.webroot, "content"));
   }
+  if (!existsSync(join(settings.webroot, "pages"))) {
+    mkdirSync(join(settings.webroot, "pages"));
+  }
 };
 
 const getPages = (dbService: DbService) => {
@@ -80,7 +80,7 @@ const getPages = (dbService: DbService) => {
   if ("error" in res) {
     throw new Error(`Error listing pages: ${res.error}`);
   }
-  return res;
+  return res.pages;
 };
 
 const getCompiledPages = (dbService: DbService) => {
@@ -92,8 +92,9 @@ const getCompiledPages = (dbService: DbService) => {
 };
 
 const compilePageType = async (
-  pageType: PageType,
-  pages: Page[],
+  pageTypeName: string,
+  pageTypeHandler: PageTypeHandler<any>,
+  pages: TranslatedPage[],
   outdatedPagePaths: Set<string>,
   compiledPages: CompiledPage[],
   newlyCompiledPages: CompiledPageEntry[],
@@ -101,22 +102,14 @@ const compilePageType = async (
   settings: Settings,
   logger: (msg: string) => void
 ) => {
-  const pageCompiler = settings.pageCompilers[pageType.name];
-  if (pageCompiler === undefined) {
-    console.warn(
-      `⚠️📄🗂️ Page type "${pageType.name}" does not have a compiler.`
-    );
-    return;
-  }
+  const pagesOfType = pages.filter((page) => page.pageType === pageTypeName);
 
-  const pagesOfType = pages.filter((page) => page.page_type_id === pageType.id);
-
-  switch (pageType.kind) {
+  switch (pageTypeHandler.kind) {
     case "list":
       await compilePageList(
-        pageCompiler,
         pagesOfType,
-        pageType,
+        pageTypeName,
+        pageTypeHandler,
         pages,
         outdatedPagePaths,
         compiledPages,
@@ -130,7 +123,7 @@ const compilePageType = async (
       if (pagesOfType.length > 1) {
         console.warn(
           "⚠️📄🗂️ Singular page type has more than one page: ",
-          pageType.name
+          pageTypeName
         );
         throw new Error("Singular page type has more than one page");
       }
@@ -139,9 +132,9 @@ const compilePageType = async (
       }
       await compilePage(
         pagesOfType[0],
-        pageCompiler,
+        pageTypeName,
+        pageTypeHandler,
         pages,
-        pageType,
         outdatedPagePaths,
         compiledPages,
         newlyCompiledPages,
@@ -154,7 +147,7 @@ const compilePageType = async (
       if (pagesOfType.length > 1) {
         console.warn(
           "⚠️📄🗂️ Virtual page type has more than one page: ",
-          pageType.name
+          pageTypeName
         );
         throw new Error("Virtual page type has more than one page");
       }
@@ -163,10 +156,9 @@ const compilePageType = async (
       }
       compileVirtualPage(
         pagesOfType[0],
-        pageType,
+        pageTypeName,
         updatedPageTypes,
         compiledPages,
-        newlyCompiledPages,
         outdatedPagePaths,
         settings
       );
@@ -175,10 +167,10 @@ const compilePageType = async (
 };
 
 const compilePageList = async (
-  pageCompiler: PageCompiler,
-  pagesOfType: Page[],
-  pageType: PageType,
-  pages: Page[],
+  pagesOfType: TranslatedPage[],
+  pageTypeName: string,
+  pageTypeHandler: ListPageTypeHandler<any>,
+  pages: TranslatedPage[],
   outdatedPagePaths: Set<string>,
   compiledPages: CompiledPage[],
   newlyCompiledPages: CompiledPageEntry[],
@@ -189,9 +181,9 @@ const compilePageList = async (
   for (const page of pagesOfType) {
     await compilePage(
       page,
-      pageCompiler,
+      pageTypeName,
+      pageTypeHandler,
       pages,
-      pageType,
       outdatedPagePaths,
       compiledPages,
       newlyCompiledPages,
@@ -217,8 +209,9 @@ type PageChange =
     };
 
 const evaluatePageChange = (
-  page: Page,
-  pageType: PageType,
+  page: TranslatedPage,
+  lang: string | undefined,
+  pageTypeName: string,
   compiledPages: CompiledPage[],
   updatedPageTypes: Set<string>,
   settings: Settings
@@ -226,8 +219,9 @@ const evaluatePageChange = (
   const hash = createHash("md5")
     .update(
       JSON.stringify({
-        type: pageType.name,
-        content: page.content,
+        type: pageTypeName,
+        lang,
+        content: lang === undefined ? page.content : page.content[lang],
         id: page.id,
       })
     )
@@ -236,9 +230,7 @@ const evaluatePageChange = (
   const changed =
     compiledPage?.hash === hash ||
     (settings.dependencies !== undefined &&
-      settings.dependencies[pageType.name].some((d) =>
-        updatedPageTypes.has(d)
-      ));
+      settings.dependencies[pageTypeName].some((d) => updatedPageTypes.has(d)));
   if (!changed) {
     if (compiledPage === undefined || !existsSync(compiledPage.path)) {
       return { type: "new", hash };
@@ -249,11 +241,10 @@ const evaluatePageChange = (
 };
 
 const compileVirtualPage = (
-  page: Page,
-  pageType: PageType,
+  page: TranslatedPage,
+  pageTypeName: string,
   updatedPageTypes: Set<string>,
   compiledPages: CompiledPage[],
-  newlyCompiledPages: CompiledPageEntry[],
   outdatedPagePaths: Set<string>,
   settings: Settings
 ) => {
@@ -261,27 +252,52 @@ const compileVirtualPage = (
   // pages that need to know about them changing.
   const changeRes = evaluatePageChange(
     page,
-    pageType,
+    undefined, // Virtual pages do not have a language
+    pageTypeName,
     compiledPages,
     updatedPageTypes,
     settings
   );
   if (changeRes.type === "unchanged") {
     outdatedPagePaths.delete(changeRes.currentPath);
-    return;
   }
-  newlyCompiledPages.push({
-    page_id: page.id,
-    path: "",
-    hash: changeRes.hash,
-  });
 };
 
 const compilePage = async (
-  page: Page,
-  pageCompiler: PageCompiler,
-  pages: Page[],
-  pageType: PageType,
+  page: TranslatedPage,
+  pageTypeName: string,
+  pageTypeHandler: SinglePageTypeHandler<any> | ListPageTypeHandler<any>,
+  pages: TranslatedPage[],
+  outdatedPagePaths: Set<string>,
+  compiledPages: CompiledPage[],
+  newlyCompiledPages: CompiledPageEntry[],
+  updatedPageTypes: Set<string>,
+  settings: Settings,
+  logger: (msg: string) => void
+) => {
+  for (const lang of settings.langs) {
+    await compilePageForLang(
+      page,
+      pageTypeName,
+      pageTypeHandler,
+      pages,
+      lang,
+      outdatedPagePaths,
+      compiledPages,
+      newlyCompiledPages,
+      updatedPageTypes,
+      settings,
+      logger
+    );
+  }
+};
+
+const compilePageForLang = async (
+  page: TranslatedPage,
+  pageTypeName: string,
+  pageTypeHandler: SinglePageTypeHandler<any> | ListPageTypeHandler<any>,
+  pages: TranslatedPage[],
+  lang: string,
   outdatedPagePaths: Set<string>,
   compiledPages: CompiledPage[],
   newlyCompiledPages: CompiledPageEntry[],
@@ -291,7 +307,8 @@ const compilePage = async (
 ) => {
   const changeRes = evaluatePageChange(
     page,
-    pageType,
+    lang,
+    pageTypeName,
     compiledPages,
     updatedPageTypes,
     settings
@@ -301,44 +318,54 @@ const compilePage = async (
     return;
   }
 
-  const pageCompilerOutput = await pageCompiler(page.content, pages);
-  if (pageCompilerOutput === undefined) {
-    return;
-  }
+  const input = {
+    content: page.content[lang],
+    lang,
+    langs: settings.langs,
+    getPagesOfType: <U extends PageTemplate>(type: string) =>
+      pages
+        .filter((p) => p.pageType === type)
+        .map((p) => p.content[lang] as ToTranslatedPageContentType<U>),
+    getPagesOfTypeUntranslated: <U extends PageTemplate>(type: string) =>
+      pages
+        .filter((p) => p.pageType === type)
+        .map(
+          (p) =>
+            p.content as Record<
+              string /* langKey */,
+              ToTranslatedPageContentType<U>
+            >
+        ),
+  };
+  const html = await pageTypeHandler.html(input);
+  const path = await pageTypeHandler.path(input);
 
-  writePage(settings, pageCompilerOutput, logger);
+  writePage(settings, changeRes.hash, html, path, logger);
   newlyCompiledPages.push({
     hash: changeRes.hash,
-    page_id: pageType.id,
-    path: pageCompilerOutput.path,
+    page_id: page.id,
+    path,
   });
-  outdatedPagePaths.delete(pageCompilerOutput.path);
-  updatedPageTypes.add(pageType.name);
+  outdatedPagePaths.delete(path);
+  updatedPageTypes.add(pageTypeName);
 };
 
 const writePage = (
   settings: Settings,
-  pageCompilerOutput: PageCompilerOutput,
+  hash: string,
+  html: string,
+  path: string,
   logger: (msg: string) => void
 ) => {
-  const webroot = resolve(settings.webroot);
-  const pagePath = resolve(join(webroot, pageCompilerOutput.path));
-  const pageDir = pagePath.substring(0, pagePath.lastIndexOf("/"));
+  const storagePath = resolve(join(settings.webroot, "pages", hash + ".html"));
 
-  if (!pagePath.startsWith(webroot + "/")) {
-    console.warn(
-      `⚠️📄🗂️ Page path is outside webroot: ${pagePath} (${webroot})`
-    );
+  if (!filePathInWebroot(settings, storagePath)) {
+    console.warn(`⚠️📄🗂️ Page path is outside webroot: ${storagePath}`);
     return;
   }
 
-  if (!existsSync(pageDir)) {
-    mkdirSync(pageDir, { recursive: true });
-    logger(`🗂️📄🌱 Directory created: ${pageDir}`);
-  }
-
-  writeFileSync(pagePath, pageCompilerOutput.html);
-  logger(`📄🖋️✅ Page written: ${pagePath}`);
+  writeFileSync(storagePath, html);
+  logger(`📄🖋️✅ Page written: "${path}" | "${storagePath}"`);
 };
 
 const compileAdminPanel = (settings: Settings) => {
@@ -355,45 +382,30 @@ const removeOutdatedPages = (
   outdatedPagePaths: Set<string>,
   logger: (msg: string) => void
 ) => {
-  const webroot = resolve(settings.webroot);
-  const contentDir = resolve(join(webroot, "content"));
-
-  const deleteEmptyDirectories = (
-    dir: string,
-    logger: (msg: string) => void
-  ) => {
-    if (dir === contentDir) {
-      return;
-    }
-    const files = readdirSync(dir);
-    if (files.length == 0) {
-      rmdirSync(dir);
-      logger(`🗑️📂✅ Empty directory removed: ${dir}`);
-      return;
-    }
-    for (let file of files) {
-      const subDirPath = join(dir, file);
-      if (statSync(subDirPath).isDirectory()) {
-        deleteEmptyDirectories(subDirPath, logger);
-      }
-    }
-  };
-
-  for (const path of outdatedPagePaths) {
-    const resolvedPath = join(webroot, path);
-    if (!resolvedPath.startsWith(webroot + "/")) {
-      console.warn(
-        `⚠️📄🗑️ Outdated page path is outside webroot: ${resolvedPath}`
-      );
-      continue;
-    }
-    if (existsSync(resolvedPath)) {
-      unlinkSync(resolvedPath);
-    }
-    logger(`🗑️📄✅ Outdated page removed: ${resolvedPath}`);
+  const res = dbService.compiledPages.deletePaths([...outdatedPagePaths]);
+  if ("error" in res) {
+    throw new Error(`Error deleting outdated compiled pages: ${res.error}`);
   }
-  deleteEmptyDirectories(webroot, logger);
-  dbService.compiledPages.deletePaths([...outdatedPagePaths]);
+  if (outdatedPagePaths.size !== 0) {
+    logger(
+      `🗑️📄✅ Outdated pages removed: ${[...outdatedPagePaths].join(", ")}`
+    );
+  }
+  const webroot = resolve(settings.webroot);
+  const pagesDir = join(webroot, "pages");
+  const hashes = new Set(res.remainingPages.map((p) => p.hash));
+  for (const file of readdirSync(pagesDir)) {
+    const hash = parse(file).name;
+    if (!hashes.has(hash)) {
+      const filePath = join(pagesDir, file);
+      unlinkSync(filePath);
+      logger(
+        `🗑️📄✅ Outdated page file removed: ${filePath} | ${
+          res.remainingPages.find((rem) => rem.hash == hash)?.path
+        }`
+      );
+    }
+  }
 };
 
 const addNewlyCompiledPages = (

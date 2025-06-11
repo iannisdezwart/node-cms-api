@@ -12,5 +12,5 @@ export const pagesRouter = (settings: Settings, dbService: DbService): Router =>
     .post("/", addPageEndpoint(settings, dbService))
     .patch("/", updatePageEndpoint(settings, dbService))
     .delete("/", deletePageEndpoint(settings, dbService))
-    .get("/", getPagesEndpoint(dbService))
+    .get("/", getPagesEndpoint(settings, dbService))
     .patch("/swap", swapPagesEndpoint(settings, dbService));

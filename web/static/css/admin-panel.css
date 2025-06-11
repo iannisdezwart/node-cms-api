@@ -15,7 +15,7 @@
 		4.5 Dropdown menu
 		4.6 Popup
 		4.7 Code
-		4.8 Image Array
+		4.8 Image Input
 		4.9 Element Groups
 		4.10 Progress Bar
 */
@@ -626,12 +626,26 @@ input:focus {
   color: #fa5555;
 }
 
-input[type="text"],
+textarea,
+input[type="text"]
 input[type="password"],
 input[type="number"] {
   box-sizing: border-box;
   border: 2px solid var(--accent);
   border-radius: 5px;
+}
+
+textarea {
+  width: 300px;
+  height: 100px;
+  color: #000;
+  background-color: #fff;
+  font-size: 16px;
+  padding: 0.5em;
+}
+
+textarea:focus {
+  outline: none;
 }
 
 input.red {
@@ -682,6 +696,16 @@ img.checkbox {
 
 .on-off-checkbox:checked::after {
   content: "On";
+}
+
+select {
+  color: #000;
+  background-color: #fff;
+  border: 2px solid var(--accent);
+  border-radius: 5px;
+  padding: 0.25em;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 /* Searchbox */
@@ -961,40 +985,28 @@ codeblock {
 }
 
 /* 
-	4.8 Image Array
+	4.8 Image Input
 */
 
-.img-array {
-  display: flex;
-  flex-wrap: wrap;
-}
-
-.img-array > * {
+.img-input {
   position: relative;
   height: 200px;
+  width: fit-content;
   margin: 0.5em;
   cursor: pointer;
-}
-
-.img-array-img {
-  position: relative;
   overflow: hidden;
   background-color: #333;
   text-align: center;
 }
 
-.img-array > .img-array-img > img {
+.img-input > img {
   height: 100%;
   min-width: 200px;
   max-width: 600px;
   object-fit: contain;
 }
 
-.img-array > .img-caption-array-img > img {
-  height: calc(100% - 48px);
-}
-
-.img-array-img-options {
+.img-input-options {
   padding: 0.5em;
   position: absolute;
   width: 100%;
@@ -1010,63 +1022,8 @@ codeblock {
   justify-content: flex-end;
 }
 
-.img-array-img:hover .img-array-img-options {
+.img-input:hover .img-input-options {
   opacity: 1;
-}
-
-.img-array-img-arrows {
-  position: absolute;
-  width: 100%;
-  top: 50%;
-  box-sizing: border-box;
-  transform: translateY(-50%);
-}
-
-.img-array-img:hover .img-array-img-arrows img {
-  opacity: 1;
-}
-
-.img-array-img-arrows img {
-  opacity: 0;
-  transition: opacity 300ms ease;
-  position: absolute;
-  height: 16px;
-  top: 50%;
-  transform: translateY(-50%);
-  padding: 0.5em;
-  background-color: white;
-  border-radius: 50%;
-  box-shadow: 3px 3px 5px rgba(0, 0, 0, 0.2);
-}
-
-.img-array-img-arrows .arrow-left {
-  left: 1em;
-}
-
-.img-array-img-arrows .arrow-right {
-  right: 1em;
-}
-
-.img-array-plus {
-  position: relative;
-  width: 267px;
-  background-color: rgba(192, 192, 192, 0.2);
-}
-
-.img-array-plus::after {
-  content: "+";
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 2em;
-  --size: 1.5em;
-  width: var(--size);
-  height: var(--size);
-  line-height: var(--size);
-  text-align: center;
-  background-color: rgba(192, 192, 192, 0.1);
-  border-radius: 50%;
 }
 
 /*

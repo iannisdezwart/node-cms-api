@@ -1,9 +1,9 @@
 import { Request, Response } from "express";
 import { cpSync, renameSync } from "fs";
-import { Settings } from "../../../settings.js";
-import { filePathIsSafe } from "./filepath-is-safe.js";
-import { updateThumbnailCache } from "./update-thumbnail-cache.js";
 import { join, resolve } from "path";
+import { Settings } from "../../../settings.js";
+import { filePathInContentDir } from "./filepath-is-safe.js";
+import { updateThumbnailCache } from "./update-thumbnail-cache.js";
 
 export const modifySingleFile = (
   settings: Settings,
@@ -27,8 +27,8 @@ export const modifySingleFile = (
     join(settings.webroot, "content", destination)
   );
   if (
-    !filePathIsSafe(settings, sourcePath) ||
-    !filePathIsSafe(settings, destinationPath)
+    !filePathInContentDir(settings, sourcePath) ||
+    !filePathInContentDir(settings, destinationPath)
   ) {
     res.status(400).json({ error: "Invalid file path" });
     return;
