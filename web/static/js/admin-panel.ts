@@ -163,16 +163,25 @@ const reloadHugeRTE = () => {
 };
 
 const initHugeRTE = () => {
+  const plugins =
+    "advlist autolink link image lists charmap preview anchor pagebreak searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media nonbreaking table emoticons help directionality";
+  const toolbar =
+    "undo redo | styles | fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image emoticons | fullscreen help";
+  const menubar = "edit insert format table help";
   hugerte.init({
-    selector: "textarea.huge-rte",
-    plugins:
-      "advlist autolink link image lists charmap preview anchor pagebreak searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media nonbreaking table emoticons help",
-    toolbar:
-      "undo redo | styles | fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image emoticons | fullscreen help",
-    menubar: "edit insert format table help",
+    selector: "textarea.huge-rte[dir=ltr]",
+    directionality: "ltr",
+    plugins,
+    toolbar,
+    menubar,
   });
-
-  return "";
+  hugerte.init({
+    selector: "textarea.huge-rte[dir=rtl]",
+    directionality: "rtl",
+    plugins,
+    toolbar,
+    menubar,
+  });
 };
 
 /*
@@ -800,11 +809,11 @@ const pageTemplateInputToHTML = (
           .map(
             ([lang, value], i) => /* html */ `
             <div
-              lang="${lang}"
               class="text-container"
               style="display: ${i === 0 ? "block" : "none"}"
+              lang="${lang}"
             >
-              <textarea class="huge-rte">${value}</textarea>
+              <textarea class="huge-rte" dir="${dir(lang)}">${value}</textarea>
             </div>
             `
           )
@@ -826,11 +835,11 @@ const pageTemplateInputToHTML = (
           .map(
             ([lang, value], i) => /* html */ `
             <div
-              lang="${lang}"
               class="text-container"
               style="display: ${i === 0 ? "block" : "none"}"
+              lang="${lang}"
             >
-              <textarea>${value}</textarea>
+              <textarea dir="${dir(lang)}">${value}</textarea>
             </div>
             `
           )
@@ -918,6 +927,16 @@ const pageTemplateInputToHTML = (
       </select>
       `
       : "";
+  }
+
+  function dir(lang: string): string {
+    // prettier-ignore
+    return [
+      "ae","ar","arc","bcc","bqi","ckb","dv","fa","glk","he","ku",
+      "mzn","nqo","pnb","prs","ps","sd","ug","ur","yi"
+    ].includes(lang) ? "rtl" : "ltr";
+    // Better, but not widely supported yet:
+    // return new Intl.Locale(lang).getTextInfo().direction;
   }
 };
 
