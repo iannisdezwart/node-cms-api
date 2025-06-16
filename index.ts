@@ -19,5 +19,6 @@ export const nodeCmsRouter = (settings: Settings): Router => {
     .use("/admin-panel", staticServe(join(settings.webroot, "admin-panel")))
     .use("/content", staticServe(join(settings.webroot, "content")))
     .use("/res", staticServe(join(settings.webroot, "res")))
+    .use("/thumbnails", staticServe(join(settings.webroot, "thumbnails")))
     .use("/", pageRouter(settings, dbService));
 };
