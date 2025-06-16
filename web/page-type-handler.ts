@@ -5,24 +5,31 @@ import {
   TranslatedPageContent,
 } from "../db/queries/pages/utils/page-type-template";
 
-export type PagesOfTypeGetter = <U extends PageTemplate>(
-  type: string
-) => ToTranslatedPageContentType<U>[];
+export type PageTypeHandlerToTranslatedPageContentType<
+  T extends PageTypeHandlersExt,
+  U extends keyof T
+> = ToTranslatedPageContentType<
+  T[U] extends PageTypeHandler<infer V> ? V : never
+>;
 
-export type PagesOfTypeUntranslatedGetter = <U extends PageTemplate>(
-  type: string
-) => Record<string /* langKey */ , ToTranslatedPageContentType<U>>[];
+export type PagesOfTypeGetter = <
+  T extends PageTypeHandlersExt,
+  U extends keyof T,
+>(
+  pageTypeHandlers: () => Promise<T>,
+  type: U
+) => PageTypeHandlerToTranslatedPageContentType<T, U>[];
 
-type Input<T extends TranslatedPageContent> = {
+export type PageGeneratorInput<T extends TranslatedPageContent> = {
   content: T;
   lang: string;
   langs: string[];
+  pageCache: Map<string, any>;
   getPagesOfType: PagesOfTypeGetter;
-  getPagesOfTypeUntranslated: PagesOfTypeUntranslatedGetter;
 };
 
-type Generator<T extends PageTemplate> = (
-  input: Input<ToTranslatedPageContentType<T>>
+type PageGenerator<T extends PageTemplate> = (
+  input: PageGeneratorInput<ToTranslatedPageContentType<T>>
 ) => Promise<string>;
 
 type PageTypeHandlerBase<T extends PageTemplate> = {
@@ -33,15 +40,15 @@ type PageTypeHandlerBase<T extends PageTemplate> = {
 export type ListPageTypeHandler<T extends PageTemplateWithTitle> =
   PageTypeHandlerBase<T> & {
     kind: "list";
-    path: Generator<T>;
-    html: Generator<T>;
+    path: PageGenerator<T>;
+    html: PageGenerator<T>;
   };
 
 export type SinglePageTypeHandler<T extends PageTemplateWithTitle> =
   PageTypeHandlerBase<T> & {
     kind: "single";
-    path: Generator<T>;
-    html: Generator<T>;
+    path: PageGenerator<T>;
+    html: PageGenerator<T>;
   };
 
 export type VirtualPageTypeHandler<T extends PageTemplate> =
@@ -57,3 +64,9 @@ export type PageTypeHandler<T extends PageTemplate> =
 export const definePage = <T extends PageTemplate>(
   handler: PageTypeHandler<T>
 ) => handler;
+
+type PageTypeHandlersExt = Record<string, PageTypeHandler<any>>;
+
+export const definePageTypeHandlers = <T extends PageTypeHandlersExt>(
+  fn: () => Promise<T>
+) => fn;

@@ -9,16 +9,15 @@ import {
 import { join, parse, resolve } from "path";
 import { filePathInWebroot } from "../api/files/utils/filepath-is-safe.js";
 import { DbService } from "../db/db-service.js";
-import {
-  PageTemplate,
-  ToTranslatedPageContentType,
-} from "../db/queries/pages/utils/page-type-template.js";
+import { ToTranslatedPageContentType } from "../db/queries/pages/utils/page-type-template.js";
 import { CompiledPage, CompiledPageEntry } from "../db/types/compiled-page.js";
 import { Settings } from "../settings.js";
 import { adminPageCompiler } from "./admin-panel-compiler.js";
 import {
   ListPageTypeHandler,
+  PageGeneratorInput,
   PageTypeHandler,
+  PageTypeHandlerToTranslatedPageContentType,
   SinglePageTypeHandler,
 } from "./page-type-handler.js";
 import { TranslatedPage, translatePages } from "./utils/translate.js";
@@ -318,27 +317,24 @@ const compilePageForLang = async (
     return;
   }
 
-  const input = {
+  const input: PageGeneratorInput<(typeof page)["content"][number]> = {
     content: page.content[lang],
     lang,
     langs: settings.langs,
-    getPagesOfType: <U extends PageTemplate>(type: string) =>
-      pages
-        .filter((p) => p.pageType === type)
-        .map((p) => p.content[lang] as ToTranslatedPageContentType<U>),
-    getPagesOfTypeUntranslated: <U extends PageTemplate>(type: string) =>
+    pageCache: new Map<string, any>(),
+    getPagesOfType: (pageTypeHandlers, type) =>
       pages
         .filter((p) => p.pageType === type)
         .map(
           (p) =>
-            p.content as Record<
-              string /* langKey */,
-              ToTranslatedPageContentType<U>
+            p.content[lang] as PageTypeHandlerToTranslatedPageContentType<
+              Awaited<ReturnType<typeof pageTypeHandlers>>,
+              typeof type
             >
         ),
   };
-  const html = await pageTypeHandler.html(input);
   const path = await pageTypeHandler.path(input);
+  const html = await pageTypeHandler.html(input);
 
   writePage(settings, changeRes.hash, html, path, logger);
   newlyCompiledPages.push({
@@ -399,11 +395,7 @@ const removeOutdatedPages = (
     if (!hashes.has(hash)) {
       const filePath = join(pagesDir, file);
       unlinkSync(filePath);
-      logger(
-        `🗑️📄✅ Outdated page file removed: ${filePath} | ${
-          res.remainingPages.find((rem) => rem.hash == hash)?.path
-        }`
-      );
+      logger(`🗑️📄✅ Outdated page file removed: ${filePath}`);
     }
   }
 };

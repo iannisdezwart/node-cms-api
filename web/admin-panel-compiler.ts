@@ -14,7 +14,7 @@ export const adminPageCompiler = (path: string) => {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>Admin Panel</title>
       <link rel="stylesheet" href="/admin-panel/css/admin-panel.css">
-      <script src="https://cdn.tiny.cloud/1/2gb6iwtbyyb1thm2k0ah0vmyy8k2ai1z2bvx0gh9ndhbv0ny/tinymce/7/tinymce.min.js" referrerpolicy="origin"></script>
+      <script src="https://cdn.jsdelivr.net/npm/hugerte@1.0.9/hugerte.min.js" referrerpolicy="origin"></script>
       <script src="/admin-panel/js/query-selector.js" charset="utf-8"></script>
       <script src="/admin-panel/js/formatting.js" charset="utf-8"></script>
       <script src="/admin-panel/js/request.js" charset="utf-8"></script>

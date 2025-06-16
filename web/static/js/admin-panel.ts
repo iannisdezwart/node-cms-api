@@ -132,11 +132,11 @@ type PageStore = {
   langs: string[];
 };
 
-declare namespace tinymce {
+declare namespace hugerte {
   export function init(obj: Object): void;
 }
 
-declare namespace tinyMCE {
+declare namespace hugeRTE {
   interface Editor {
     editorContainer: HTMLElement;
     getContent: () => string;
@@ -146,32 +146,30 @@ declare namespace tinyMCE {
   export function get(): Editor[];
 }
 
-const saveTinyMCEState = () => {
-  for (const editor of tinyMCE.get()) {
+const saveHugeRTEState = () => {
+  for (const editor of hugeRTE.get()) {
     const textArea = editor.editorContainer
       .previousElementSibling as HTMLTextAreaElement;
     textArea.innerText = editor.getContent();
   }
 };
 
-const reloadTinyMCE = () => {
-  for (const editor of tinyMCE.get()) {
+const reloadHugeRTE = () => {
+  for (const editor of hugeRTE.get()) {
     editor.remove();
   }
 
-  initTinyMCE();
+  initHugeRTE();
 };
 
-const initTinyMCE = () => {
-  tinymce.init({
-    selector: "textarea.tiny-mce",
+const initHugeRTE = () => {
+  hugerte.init({
+    selector: "textarea.huge-rte",
     plugins:
       "advlist autolink link image lists charmap preview anchor pagebreak searchreplace wordcount visualblocks visualchars code fullscreen insertdatetime media nonbreaking table emoticons help",
     toolbar:
-      "undo redo | styleselect | fontsizeselect | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image emoticons | print preview fullpage | help",
+      "undo redo | styles | fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | link image emoticons | fullscreen help",
     menubar: "edit insert format table help",
-    skin: "snow",
-    height: "400",
   });
 
   return "";
@@ -590,7 +588,7 @@ const editPage = async (id: number) => {
     "page-id": page.id.toFixed(),
   });
 
-  initTinyMCE();
+  initHugeRTE();
 };
 
 /*
@@ -650,7 +648,7 @@ const addPage = async (pageType: string) => {
     showPages();
   };
 
-  initTinyMCE();
+  initHugeRTE();
   setSearchParams({
     tab: "add-page",
     "page-type": pageType,
@@ -806,7 +804,7 @@ const pageTemplateInputToHTML = (
               class="text-container"
               style="display: ${i === 0 ? "block" : "none"}"
             >
-              <textarea class="tiny-mce">${value}</textarea>
+              <textarea class="huge-rte">${value}</textarea>
             </div>
             `
           )
@@ -1047,7 +1045,7 @@ const collectInput = (
       return Object.fromEntries(
         textContainers.map((textContainer) => [
           textContainer.getAttribute("lang"),
-          tinyMCE
+          hugeRTE
             .get()
             .filter((editor) =>
               isChildOf(editor.editorContainer, textContainer)
@@ -1165,8 +1163,8 @@ const editImg = async (buttonEl: HTMLButtonElement) => {
 
 const moveGroup = (buttonEl: HTMLButtonElement, direction: "up" | "down") => {
   // For some reason we need to do this twice to get it to work.
-  saveTinyMCEState();
-  saveTinyMCEState();
+  saveHugeRTEState();
+  saveHugeRTEState();
 
   const thisItem = buttonEl.parentElement!.$<HTMLDivElement>(".content")!;
   const thisItemContainer = buttonEl.parentElement!;
@@ -1193,8 +1191,8 @@ const moveGroup = (buttonEl: HTMLButtonElement, direction: "up" | "down") => {
   }
 
   // For some reason we need to reload it twice to get it to work.
-  reloadTinyMCE();
-  reloadTinyMCE();
+  reloadHugeRTE();
+  reloadHugeRTE();
 };
 
 // 3.8.2 Delete Group
@@ -1252,7 +1250,7 @@ const addGroup = (buttonEl: HTMLButtonElement, inputTypeIndex: number) => {
     `
   );
 
-  initTinyMCE();
+  initHugeRTE();
 };
 
 /* ===================

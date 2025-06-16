@@ -572,7 +572,7 @@ button.plus::after {
 	4.3 Inputs
 */
 
-.tox-tinymce {
+.tox-hugerte {
   background-color: #fff;
 }
 
@@ -1073,10 +1073,4 @@ codeblock {
   background-color: var(--accent);
 
   transition: width 300ms ease;
-}
-
-/* Remove Tiny MCE warning */
-
-.tox-notifications-container {
-  display: none !important;
 }
