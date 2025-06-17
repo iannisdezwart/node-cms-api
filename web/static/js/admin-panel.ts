@@ -69,13 +69,11 @@
 
 window.onload = async () => {
   const username = localStorage.getItem("username");
-
-  goToTheRightPage();
   initPadlock();
-
   if (username === null) {
     await login();
   }
+  goToTheRightPage();
 
   // Set the greeting.
   const greetingLI = $<HTMLLIElement>("#greeting");
@@ -737,7 +735,7 @@ const pageTemplateInputToHTML = (
   inputType: ContentType,
   inputName: string,
   inputContent: any,
-  nested = false
+  nestingLevel = 0
 ): string => {
   switch (inputType) {
     default: {
@@ -751,7 +749,7 @@ const pageTemplateInputToHTML = (
       globalInputTypes.push(inputType);
 
       return /* html */ `
-      <div class="element-group" root="${!nested}" data-input="${inputName}">
+      <div class="element-group" data-nesting-level="${nestingLevel}" data-input="${inputName}">
         ${reduceArray(
           (inputContent as any[]) || [],
           (el, i) => /* html */ `
@@ -765,7 +763,7 @@ const pageTemplateInputToHTML = (
                   group.type,
                   group.name,
                   el[group.name],
-                  true
+                  nestingLevel + 1
                 )}
                 `
               )}
@@ -791,14 +789,16 @@ const pageTemplateInputToHTML = (
           </div>
           `
         )}
-        <button class="small" onclick="addGroup(this, ${inputTypeIndex})">Add</button>
+        <button class="small" onclick="addGroup(this, ${inputTypeIndex}, ${
+        nestingLevel + 1
+      })">Add</button>
       </div>
       `;
     }
 
     case "text": {
       return /* html */ `
-      <div root="${!nested}" data-input="${inputName}">
+      <div data-nesting-level="${nestingLevel}" data-input="${inputName}">
         ${makeLanguageSwitcher(globalLangs)}
         <br>
         ${globalLangs
@@ -824,7 +824,7 @@ const pageTemplateInputToHTML = (
 
     case "string": {
       return /* html */ `
-      <div root="${!nested}" data-input="${inputName}">
+      <div data-nesting-level="${nestingLevel}" data-input="${inputName}">
         ${makeLanguageSwitcher(globalLangs)}
         <br>
         ${globalLangs
@@ -850,19 +850,19 @@ const pageTemplateInputToHTML = (
 
     case "img": {
       const img = inputContent ? (inputContent as string) : "";
-      return generateImgInput(img, nested, inputName);
+      return generateImgInput(img, nestingLevel, inputName);
     }
 
     case "svg": {
       const img = inputContent ? (inputContent as string) : "";
-      return generateImgInput(img, nested, inputName, ["svg"]);
+      return generateImgInput(img, nestingLevel, inputName, ["svg"]);
     }
 
     case "video": {
       const videoPath = inputContent ? (inputContent as string) : "";
 
       return /* html */ `
-      <div class="video-input" root="${!nested}" data-input="${inputName}">
+      <div class="video-input" data-nesting-level="${nestingLevel}" data-input="${inputName}">
         <video src="${videoPath}" data-path="${videoPath.replace(
         /\"/g,
         "&quot;"
@@ -881,7 +881,7 @@ const pageTemplateInputToHTML = (
       const dateString = `${yyyy}-${mm}-${dd}`;
 
       return /* html */ `
-      <input root="${!nested}" data-input="${inputName}" type="date" value="${dateString}">
+      <input data-nesting-level="${nestingLevel}" data-input="${inputName}" type="date" value="${dateString}">
       `;
     }
 
@@ -889,7 +889,7 @@ const pageTemplateInputToHTML = (
       const number = inputContent ? (inputContent as string) : "0";
 
       return /* html */ `
-      <input root="${!nested}" data-input="${inputName}" type="number" value="${number}">
+      <input data-nesting-level="${nestingLevel}" data-input="${inputName}" type="number" value="${number}">
       `;
     }
 
@@ -897,9 +897,11 @@ const pageTemplateInputToHTML = (
       const bool = inputContent ? (inputContent as boolean) : false;
 
       return /* html */ `
-      <input class="on-off-checkbox" root="${!nested}" data-input="${inputName}" type="checkbox" ${
-        bool ? "checked" : ""
-      }>
+      <input
+        class="on-off-checkbox"
+        data-nesting-level="${nestingLevel}"
+        data-input="${inputName}"
+        type="checkbox" ${bool ? "checked" : ""}>
       `;
     }
   }
@@ -944,13 +946,13 @@ const pageTemplateInputToHTML = (
 
 const generateImgInput = (
   imgSrc: string,
-  nested: boolean,
+  nestingLevel: number,
   inputName: string,
   extensions?: string[]
 ) => /* html */ `
 <div
   class="img-input"
-  root="${!nested}"
+  data-nesting-level="${nestingLevel}"
   data-input="${inputName}"
   data-extensions="${extensions ? extensions.join(",") : ""}"
 >
@@ -1115,7 +1117,7 @@ const collectInput = (
 
 const collectInputs = (template: PageTemplate) => {
   // Get all input elements.
-  const elements = $a<HTMLInputElement>('[root="true"][data-input]');
+  const elements = $a<HTMLInputElement>('[data-input][data-nesting-level="0"]');
   const pageContent: PageContent = {};
 
   // Parse inputs.
@@ -1237,7 +1239,11 @@ const deleteGroup = (buttonEl: HTMLButtonElement) => {
 
 // 3.8.3 Add Group
 
-const addGroup = (buttonEl: HTMLButtonElement, inputTypeIndex: number) => {
+const addGroup = (
+  buttonEl: HTMLButtonElement,
+  inputTypeIndex: number,
+  nestingLevel: number
+) => {
   const inputType = globalInputTypes[inputTypeIndex];
 
   if (buttonEl.previousElementSibling != null) {
@@ -1258,7 +1264,7 @@ const addGroup = (buttonEl: HTMLButtonElement, inputTypeIndex: number) => {
           inputType,
           (group) => /* html */ `
           <h3>${group.name}:</h3>
-          ${pageTemplateInputToHTML(group.type, group.name, null, true)}
+          ${pageTemplateInputToHTML(group.type, group.name, null, nestingLevel)}
           `
         )}
       </div>

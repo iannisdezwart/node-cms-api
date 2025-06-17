@@ -20,9 +20,12 @@ const getSuToken = async (loginData?: {
     return await getSuToken({ username, password });
   }
 
-  const res = await makeRequest("/admin-panel/api/auth/login", "POST", {
-    loginData,
-  });
+  const res = await makeRequest(
+    "/admin-panel/api/auth/login",
+    "POST",
+    { loginData },
+    { disableAuth: true }
+  );
   if (!res.ok) {
     if (res.status == 403) {
       // Incorrect password.
@@ -72,7 +75,7 @@ const requestLoginData = async (incorrect = false) => {
 };
 
 const togglePadlock = async () => {
-  if (localStorage.getItem("token") === undefined) {
+  if (localStorage.getItem("token") == null) {
     const suToken = await getSuToken();
     if (suToken != undefined) {
       setPadlock("unlocked");

@@ -28,6 +28,7 @@
   --background: #222;
   --background-lighter: #333;
   --accent: #6fc95d;
+  --accent-faint: #666;
 }
 
 * {
@@ -1035,8 +1036,20 @@ codeblock {
   padding: 1em;
 }
 
+.element-group[data-nesting-level="1"],
+.element-group[data-nesting-level="4"],
+.element-group[data-nesting-level="7"] {
+  border-color: #c9b35d;
+}
+
+.element-group[data-nesting-level="2"],
+.element-group[data-nesting-level="5"],
+.element-group[data-nesting-level="8"] {
+  border-color: #c97a5d;
+}
+
 .element-group-item {
-  border: 2px solid var(--accent);
+  border: 2px dashed var(--accent-faint);
   padding: 1em;
   margin: 1em 0;
 }
