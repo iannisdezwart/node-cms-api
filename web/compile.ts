@@ -9,7 +9,6 @@ import {
 import { join, parse, resolve } from "path";
 import { filePathInWebroot } from "../api/files/utils/filepath-is-safe.js";
 import { DbService } from "../db/db-service.js";
-import { ToTranslatedPageContentType } from "../db/queries/pages/utils/page-type-template.js";
 import { CompiledPage, CompiledPageEntry } from "../db/types/compiled-page.js";
 import { Settings } from "../settings.js";
 import { adminPageCompiler } from "./admin-panel-compiler.js";
@@ -26,14 +25,14 @@ import { workOutDependencies } from "./utils/work-out-dependency-graph.js";
 export const compile = async (
   settings: Settings,
   dbService: DbService,
-  logger: (msg: string) => void
+  logger: (level: "debug" | "info", msg: string) => void
 ) => {
   const startTime = Date.now();
   initWebroot(settings);
   compileAdminPanel(settings);
 
   const compiledPages = getCompiledPages(dbService);
-  const outdatedPagePaths = new Set<string>(compiledPages.map((p) => p.path));
+  const outdatedPageWebPaths = new Set<string>(compiledPages.map((p) => p.path));
   const updatedPageTypes = new Set<string>();
   const newlyCompiledPages: CompiledPageEntry[] = [];
 
@@ -46,7 +45,7 @@ export const compile = async (
       pageTypeName,
       pageTypeHandler,
       pages,
-      outdatedPagePaths,
+      outdatedPageWebPaths,
       compiledPages,
       newlyCompiledPages,
       updatedPageTypes,
@@ -55,11 +54,11 @@ export const compile = async (
     );
   }
 
-  removeOutdatedPages(settings, dbService, outdatedPagePaths, logger);
   addNewlyCompiledPages(dbService, newlyCompiledPages);
+  removeOutdatedPages(settings, dbService, outdatedPageWebPaths, logger);
 
   const endTime = Date.now();
-  logger(`🗂️📄✅ Compilation complete in ${endTime - startTime}ms`);
+  logger("info", `🗂️📄✅ Compilation complete in ${endTime - startTime}ms`);
 };
 
 const initWebroot = (settings: Settings) => {
@@ -94,12 +93,12 @@ const compilePageType = async (
   pageTypeName: string,
   pageTypeHandler: PageTypeHandler<any>,
   pages: TranslatedPage[],
-  outdatedPagePaths: Set<string>,
+  outdatedPageWebPaths: Set<string>,
   compiledPages: CompiledPage[],
   newlyCompiledPages: CompiledPageEntry[],
   updatedPageTypes: Set<string>,
   settings: Settings,
-  logger: (msg: string) => void
+  logger: (level: "debug" | "info", msg: string) => void
 ) => {
   const pagesOfType = pages.filter((page) => page.pageType === pageTypeName);
 
@@ -110,7 +109,7 @@ const compilePageType = async (
         pageTypeName,
         pageTypeHandler,
         pages,
-        outdatedPagePaths,
+        outdatedPageWebPaths,
         compiledPages,
         newlyCompiledPages,
         updatedPageTypes,
@@ -134,7 +133,7 @@ const compilePageType = async (
         pageTypeName,
         pageTypeHandler,
         pages,
-        outdatedPagePaths,
+        outdatedPageWebPaths,
         compiledPages,
         newlyCompiledPages,
         updatedPageTypes,
@@ -158,7 +157,7 @@ const compilePageType = async (
         pageTypeName,
         updatedPageTypes,
         compiledPages,
-        outdatedPagePaths,
+        outdatedPageWebPaths,
         settings
       );
       return;
@@ -170,12 +169,12 @@ const compilePageList = async (
   pageTypeName: string,
   pageTypeHandler: ListPageTypeHandler<any>,
   pages: TranslatedPage[],
-  outdatedPagePaths: Set<string>,
+  outdatedPageWebPaths: Set<string>,
   compiledPages: CompiledPage[],
   newlyCompiledPages: CompiledPageEntry[],
   updatedPageTypes: Set<string>,
   settings: Settings,
-  logger: (msg: string) => void
+  logger: (level: "debug" | "info", msg: string) => void
 ) => {
   for (const page of pagesOfType) {
     await compilePage(
@@ -183,7 +182,7 @@ const compilePageList = async (
       pageTypeName,
       pageTypeHandler,
       pages,
-      outdatedPagePaths,
+      outdatedPageWebPaths,
       compiledPages,
       newlyCompiledPages,
       updatedPageTypes,
@@ -204,7 +203,7 @@ type PageChange =
     }
   | {
       type: "unchanged";
-      currentPath: string;
+      currentWebPath: string;
     };
 
 const evaluatePageChange = (
@@ -225,16 +224,20 @@ const evaluatePageChange = (
       })
     )
     .digest("hex");
-  const compiledPage = compiledPages.find((p) => p.page_id === page.id);
+  const compiledPage = compiledPages.find(
+    (p) => p.page_id === page.id && p.path.startsWith(`/${lang}`)
+  );
   const changed =
-    compiledPage?.hash === hash ||
+    compiledPage?.hash !== hash ||
     (settings.dependencies !== undefined &&
       settings.dependencies[pageTypeName].some((d) => updatedPageTypes.has(d)));
+
+  const storagePath = join(resolve(settings.webroot), "pages", hash + ".html");
   if (!changed) {
-    if (compiledPage === undefined || !existsSync(compiledPage.path)) {
+    if (compiledPage === undefined || !existsSync(storagePath)) {
       return { type: "new", hash };
     }
-    return { type: "unchanged", currentPath: compiledPage.path };
+    return { type: "unchanged", currentWebPath: compiledPage.path };
   }
   return { type: "updated", hash };
 };
@@ -244,7 +247,7 @@ const compileVirtualPage = (
   pageTypeName: string,
   updatedPageTypes: Set<string>,
   compiledPages: CompiledPage[],
-  outdatedPagePaths: Set<string>,
+  outdatedPageWebPaths: Set<string>,
   settings: Settings
 ) => {
   // Virtual pages are not actually compiled, but they may have dependent
@@ -258,7 +261,7 @@ const compileVirtualPage = (
     settings
   );
   if (changeRes.type === "unchanged") {
-    outdatedPagePaths.delete(changeRes.currentPath);
+    outdatedPageWebPaths.delete(changeRes.currentWebPath);
   }
 };
 
@@ -267,12 +270,12 @@ const compilePage = async (
   pageTypeName: string,
   pageTypeHandler: SinglePageTypeHandler<any> | ListPageTypeHandler<any>,
   pages: TranslatedPage[],
-  outdatedPagePaths: Set<string>,
+  outdatedPageWebPaths: Set<string>,
   compiledPages: CompiledPage[],
   newlyCompiledPages: CompiledPageEntry[],
   updatedPageTypes: Set<string>,
   settings: Settings,
-  logger: (msg: string) => void
+  logger: (level: "debug" | "info", msg: string) => void
 ) => {
   for (const lang of settings.langs) {
     await compilePageForLang(
@@ -281,7 +284,7 @@ const compilePage = async (
       pageTypeHandler,
       pages,
       lang,
-      outdatedPagePaths,
+      outdatedPageWebPaths,
       compiledPages,
       newlyCompiledPages,
       updatedPageTypes,
@@ -297,12 +300,12 @@ const compilePageForLang = async (
   pageTypeHandler: SinglePageTypeHandler<any> | ListPageTypeHandler<any>,
   pages: TranslatedPage[],
   lang: string,
-  outdatedPagePaths: Set<string>,
+  outdatedPageWebPaths: Set<string>,
   compiledPages: CompiledPage[],
   newlyCompiledPages: CompiledPageEntry[],
   updatedPageTypes: Set<string>,
   settings: Settings,
-  logger: (msg: string) => void
+  logger: (level: "debug" | "info", msg: string) => void
 ) => {
   const changeRes = evaluatePageChange(
     page,
@@ -312,8 +315,14 @@ const compilePageForLang = async (
     updatedPageTypes,
     settings
   );
+  logger(
+    "info",
+    `📄🗂️ Compiling page "${pageTypeName}" (${
+      page.id
+    }) in "${lang}": ${JSON.stringify(changeRes)}`
+  );
   if (changeRes.type === "unchanged") {
-    outdatedPagePaths.delete(changeRes.currentPath);
+    outdatedPageWebPaths.delete(changeRes.currentWebPath);
     return;
   }
 
@@ -333,16 +342,16 @@ const compilePageForLang = async (
             >
         ),
   };
-  const path = await pageTypeHandler.path(input);
+  const webPath = await pageTypeHandler.path(input);
   const html = await pageTypeHandler.html(input);
 
-  writePage(settings, changeRes.hash, html, path, logger);
+  writePage(settings, changeRes.hash, html, webPath, logger);
   newlyCompiledPages.push({
     hash: changeRes.hash,
     page_id: page.id,
-    path,
+    path: webPath,
   });
-  outdatedPagePaths.delete(path);
+  outdatedPageWebPaths.delete(webPath);
   updatedPageTypes.add(pageTypeName);
 };
 
@@ -350,8 +359,8 @@ const writePage = (
   settings: Settings,
   hash: string,
   html: string,
-  path: string,
-  logger: (msg: string) => void
+  webPath: string,
+  logger: (level: "debug" | "info", msg: string) => void
 ) => {
   const storagePath = resolve(join(settings.webroot, "pages", hash + ".html"));
 
@@ -361,7 +370,7 @@ const writePage = (
   }
 
   writeFileSync(storagePath, html);
-  logger(`📄🖋️✅ Page written: "${path}" | "${storagePath}"`);
+  logger("info", `📄🖋️✅ Page written: "${webPath}" | "${storagePath}"`);
 };
 
 const compileAdminPanel = (settings: Settings) => {
@@ -375,16 +384,17 @@ const compileAdminPanel = (settings: Settings) => {
 const removeOutdatedPages = (
   settings: Settings,
   dbService: DbService,
-  outdatedPagePaths: Set<string>,
-  logger: (msg: string) => void
+  outdatedPageWebPaths: Set<string>,
+  logger: (level: "debug" | "info", msg: string) => void
 ) => {
-  const res = dbService.compiledPages.deletePaths([...outdatedPagePaths]);
+  const res = dbService.compiledPages.deletePaths([...outdatedPageWebPaths]);
   if ("error" in res) {
     throw new Error(`Error deleting outdated compiled pages: ${res.error}`);
   }
-  if (outdatedPagePaths.size !== 0) {
+  if (outdatedPageWebPaths.size !== 0) {
     logger(
-      `🗑️📄✅ Outdated pages removed: ${[...outdatedPagePaths].join(", ")}`
+      "info",
+      `🗑️📄✅ Outdated pages removed: ${[...outdatedPageWebPaths].join(", ")}`
     );
   }
   const webroot = resolve(settings.webroot);
@@ -395,7 +405,7 @@ const removeOutdatedPages = (
     if (!hashes.has(hash)) {
       const filePath = join(pagesDir, file);
       unlinkSync(filePath);
-      logger(`🗑️📄✅ Outdated page file removed: ${filePath}`);
+      logger("info", `🗑️📄✅ Outdated page file removed: ${filePath}`);
     }
   }
 };

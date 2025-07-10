@@ -69,7 +69,6 @@ const doFileUpload = (
     req.setRequestHeader("Accept", "application/json");
     req.setRequestHeader("Authorization", `Bearer ${await getSuToken()}`);
     req.send(formData);
-    console.log("Request sent", url, path, formData);
   });
 
 const handleRequestError = (err: { status: number; body: any }) => {

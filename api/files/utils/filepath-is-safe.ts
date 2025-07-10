@@ -8,7 +8,7 @@ const filePathWithinDir = (path: string, dir: string): boolean => {
     resolvedPath !== resolvedDir &&
     !resolvedPath.startsWith(resolvedDir + "/")
   ) {
-    console.log(
+    console.warn(
       `📂🚨 Unsafe file path: ${resolvedPath}, not in ${resolvedDir}`
     );
     return false;

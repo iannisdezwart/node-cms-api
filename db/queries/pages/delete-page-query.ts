@@ -5,7 +5,28 @@ type RetVal = { pageId: number } | { error: Err };
 
 export const deletePageQuery = (db: Database, id: number): RetVal =>
   db.transaction((): RetVal => {
-    let updatePageRes = db
+    let pageLookupRes = db
+      .prepare(
+        /* sql */
+        `
+        SELECT id FROM pages
+        WHERE id = ?
+        `
+      )
+      .get(id) as { id: number } | undefined;
+    if (pageLookupRes === undefined) {
+      return { error: "DatabaseDeleteError" };
+    }
+
+    db.prepare(
+      /* sql */
+      `
+        DELETE FROM compiled_pages
+        WHERE page_id = ?
+        `
+    ).run(id);
+
+    let deletePageRes = db
       .prepare(
         /* sql */
         `
@@ -14,7 +35,7 @@ export const deletePageQuery = (db: Database, id: number): RetVal =>
         `
       )
       .run(id);
-    if (updatePageRes.changes === 0) {
+    if (deletePageRes.changes === 0) {
       return { error: "DatabaseDeleteError" };
     }
 

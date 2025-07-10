@@ -6,4 +6,5 @@ export type Settings = {
   pageTypeHandlers: Record<string, PageTypeHandler<any>>;
   langs: string[];
   dependencies?: Record<string, string[]>;
+  logLevel?: "debug" | "info";
 };

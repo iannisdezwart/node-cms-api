@@ -1,16 +1,21 @@
 import { json, Router, static as staticServe } from "express";
+import { join } from "path";
 import { apiRouter } from "./api/router.js";
 import { getDbService } from "./db/db-service.js";
 import { getAccessTokenService } from "./jwt/jwt-service.js";
 import { Settings } from "./settings.js";
 import { compile } from "./web/compile.js";
 import { pageRouter } from "./web/page-router.js";
-import { join } from "path";
 
 export const nodeCmsRouter = (settings: Settings): Router => {
   const dbService = getDbService(settings);
   const jwtService = getAccessTokenService();
-  compile(settings, dbService, console.log).catch((error) => {
+  compile(settings, dbService, (lvl, msg) => {
+    if (settings.logLevel !== "debug" && lvl === "debug") {
+      return;
+    }
+    console.log(`[${lvl}] ${msg}`);
+  }).catch((error) => {
     console.error("⚠️🎬💥 Error during initial compilation:", error);
   });
 

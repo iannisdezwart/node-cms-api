@@ -11,7 +11,12 @@ export const compileSite = async (
   res.setHeader("Content-Type", "application/jsonl");
 
   try {
-    await compile(settings, dbService, (msg) => {
+    await compile(settings, dbService, (lvl, msg) => {
+      if (settings.logLevel !== "debug" && lvl === "debug") {
+        return;
+      }
+
+      console.log(`[${lvl}] ${msg}`);
       res.write(JSON.stringify({ type: "out", data: msg }) + "\n");
     });
   } catch (err) {
