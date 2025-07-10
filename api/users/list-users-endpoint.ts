@@ -20,5 +20,11 @@ export const listUsersEndpoint =
       }
     }
 
-    res.status(200).json(listUsersResult);
+    res.status(200).json({
+      users: listUsersResult.users.map((u) => ({
+        id: u.id,
+        username: u.username,
+        level: u.level,
+      })),
+    });
   };

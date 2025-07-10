@@ -4,19 +4,19 @@ import { DbService } from "../../db/db-service.js";
 export const deleteUserEndpoint =
   (dbService: DbService): RequestHandler =>
   async (req, res) => {
-    const { username } = req.body;
+    const { userId } = req.body;
 
     // Validate input.
-    if (username === undefined) {
-      res.status(400).json({ error: "Username is required" });
+    if (userId === undefined) {
+      res.status(400).json({ error: "User ID is required" });
       return;
     }
-    if (typeof username !== "string") {
-      res.status(400).json({ error: "Username must be a string" });
+    if (typeof userId !== "number") {
+      res.status(400).json({ error: "User ID must be a number" });
       return;
     }
 
-    const deleteUserResult = dbService.users.delete(username);
+    const deleteUserResult = dbService.users.delete(userId);
 
     if ("error" in deleteUserResult) {
       switch (deleteUserResult.error) {

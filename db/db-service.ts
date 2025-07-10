@@ -22,10 +22,10 @@ export type DbService = {
   users: {
     get(username: string): ReturnType<typeof getUserQuery>;
     list(): ReturnType<typeof listUsersQuery>;
-    delete(username: string): ReturnType<typeof deleteUserQuery>;
+    delete(userId: number): ReturnType<typeof deleteUserQuery>;
     add(username: string, password: string): ReturnType<typeof addUserQuery>;
     updatePassword(
-      username: string,
+      userId: number,
       newPassword: string
     ): ReturnType<typeof updateUserPasswordQuery>;
   };
@@ -57,11 +57,11 @@ export const getDbService = (settings: Settings): DbService => {
     users: {
       get: (username: string) => getUserQuery(db, username),
       list: () => listUsersQuery(db),
-      delete: (username: string) => deleteUserQuery(db, username),
+      delete: (userId: number) => deleteUserQuery(db, userId),
       add: (username: string, password: string) =>
         addUserQuery(db, settings, username, password),
-      updatePassword: (username: string, newPassword: string) =>
-        updateUserPasswordQuery(db, settings, username, newPassword),
+      updatePassword: (userId: number, newPassword: string) =>
+        updateUserPasswordQuery(db, settings, userId, newPassword),
     },
     pages: {
       add: (type: string, content: PageContent) =>

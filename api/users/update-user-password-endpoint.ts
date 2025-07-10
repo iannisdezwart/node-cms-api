@@ -4,29 +4,28 @@ import { DbService } from "../../db/db-service.js";
 export const updateUserPasswordEndpoint =
   (dbService: DbService): RequestHandler =>
   async (req, res) => {
-    const { username, newPassword } = req.body;
+    const { userId, newPassword } = req.body;
 
     // Validate input.
-    if (username === undefined || newPassword === undefined) {
-      res.status(400).json({ error: "Username and new password are required" });
+    if (userId === undefined || newPassword === undefined) {
+      res.status(400).json({ error: "User ID and new password are required" });
       return;
     }
-    if (typeof username !== "string" || typeof newPassword !== "string") {
-      res
-        .status(400)
-        .json({ error: "Username and new password must be strings" });
-      return;
-    }
-    if (username.length < 3 || newPassword.length < 8) {
+    if (typeof userId !== "number" || typeof newPassword !== "string") {
       res.status(400).json({
-        error:
-          "Username must be at least 3 characters and new password at least 8 characters",
+        error: "User ID must be a number and new password must be a string",
+      });
+      return;
+    }
+    if (newPassword.length < 8) {
+      res.status(400).json({
+        error: "New password at least 8 characters",
       });
       return;
     }
 
     const updateUserResult = dbService.users.updatePassword(
-      username,
+      userId,
       newPassword
     );
 

@@ -8,17 +8,18 @@ type RetVal = {} | { error: Err };
 export const updateUserPasswordQuery = (
   db: Database,
   settings: Settings,
-  username: string,
+  userId: number,
   newPassword: string
 ): RetVal => {
-  const stmt = db.prepare(
-    /* sql */
-    `
-    UPDATE users SET password = ? WHERE username = ?
-    `
-  );
   const hashedPassword = hashSync(newPassword, settings.bcryptRounds);
-  const res = stmt.run(username, hashedPassword);
+  const res = db
+    .prepare(
+      /* sql */
+      `
+      UPDATE users SET password = ? WHERE id = ?
+      `
+    )
+    .run(hashedPassword, userId);
   if (res.changes === 0) {
     return { error: "DatabaseUpdateError" };
   }

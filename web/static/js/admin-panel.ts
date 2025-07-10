@@ -2349,7 +2349,8 @@ const createNewDirectory = async (parentDirectoryPath: string) => {
 
 interface User {
   id: number;
-  name: string;
+  username: string;
+  level: number;
 }
 
 /*
@@ -2363,7 +2364,7 @@ const fetchUsers = async () => {
     return undefined;
   }
 
-  return result.body as User[];
+  return result.body.users as User[];
 };
 
 /*
@@ -2396,10 +2397,10 @@ const showUserManagement = async () => {
         (user) => /* html */ `
         <tr>
           <td class="col-id">${user.id}</td>
-          <td class="col-name">${user.name}</td>
+          <td class="col-name">${user.username}</td>
           <td class="col-options">
-            <button class="small" onclick="changePassword(${user.id}, '${user.name}')">Change Password</button>
-            <button class="small red" onclick="deleteUser(${user.id}, '${user.name}')">Delete</button>
+            <button class="small" onclick="changePassword(${user.id}, '${user.username}')">Change Password</button>
+            <button class="small red" onclick="deleteUser(${user.id}, '${user.username}')">Delete</button>
           </td>
         </tr>
         `
@@ -2420,7 +2421,7 @@ const showUserManagement = async () => {
   6.3 Change User's Password
 */
 
-const changePassword = async (username: string) => {
+const changePassword = async (userId: number, username: string) => {
   const popupRes = await popup(
     "Changing Password",
     `Enter a new password for user ${username}`,
@@ -2456,7 +2457,7 @@ const changePassword = async (username: string) => {
   }
 
   const res = await makeRequest("/admin-panel/api/users", "PATCH", {
-    username,
+    userId,
     newPassword,
   });
   if (!res.ok) {
@@ -2474,7 +2475,7 @@ const changePassword = async (username: string) => {
   6.4 Delete User
 */
 
-const deleteUser = async (username: string) => {
+const deleteUser = async (userId: number, username: string) => {
   const popupRes = await popup(
     "Deleting User",
     `Are you sure you want to delete user ${username}?`,
@@ -2491,7 +2492,7 @@ const deleteUser = async (username: string) => {
 
   if (popupRes.buttonName == "Delete User") {
     const res = await makeRequest("/admin-panel/api/users", "DELETE", {
-      username,
+      userId,
     });
     if (!res.ok) {
       handleRequestError(res);
@@ -2538,7 +2539,7 @@ const addUser = async () => {
   const password = popupRes.inputs.get("password");
   const confirmedPassword = popupRes.inputs.get("confirmed-password");
 
-  if (password == confirmedPassword) {
+  if (password !== confirmedPassword) {
     notification(
       "Error",
       "The passwords you entered did not match. Please try again."
