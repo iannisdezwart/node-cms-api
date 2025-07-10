@@ -957,11 +957,18 @@ div.input:first-child {
   height: 300px;
   width: min(65vw, 700px);
   overflow-y: auto;
-  font-family: monospace;
-  padding: 0.25em;
+  padding: 1em;
   box-sizing: border-box;
   border-radius: 5px;
   background-color: #333;
+}
+
+.popup-log-body pre {
+  font-family: monospace;
+}
+
+.popup-log-body pre.err {
+  color: #fa5555;
 }
 
 /* 

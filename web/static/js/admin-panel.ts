@@ -340,16 +340,33 @@ const showCompilationProgress = async (res: MakeRequestResult) => {
 
   const popupBodyProvide = logPopup("Compiling...");
   const reader = (res.body as ReadableStream).getReader();
+  let remainder = "";
   while (true) {
     const { done, value } = await reader.read();
     if (value === undefined && !done) {
       continue;
     }
 
-    // TODO: Chunk by newlines and parse JSON.
-    popupBodyProvide(value);
+    const utf8Decoder = new TextDecoder("utf-8");
+    const chunk = remainder + utf8Decoder.decode(value);
+    remainder = "";
+    const lines = chunk
+      .split("\n")
+      .filter((l) => l.trim() !== "")
+      .map((l) => {
+        try {
+          return JSON.parse(l) as { type: "out" | "err"; data: string };
+        } catch (error) {
+          remainder = l;
+          return undefined;
+        }
+      })
+      .filter(<T>(v: T | undefined): v is T => v !== undefined)
+      .map((l) => `<pre class="${l.type}">${l.data}</pre>`);
+    popupBodyProvide(lines.join(""));
 
     if (done) {
+      popupBodyProvide();
       break;
     }
   }

@@ -9,6 +9,9 @@ export const compileSite = async (
   res: Response
 ) => {
   res.setHeader("Content-Type", "application/jsonl");
+  res.write(
+    JSON.stringify({ type: "out", data: "Starting site compilation..." }) + "\n"
+  );
 
   try {
     await compile(settings, dbService, (lvl, msg) => {

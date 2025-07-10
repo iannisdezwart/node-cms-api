@@ -315,12 +315,6 @@ const compilePageForLang = async (
     updatedPageTypes,
     settings
   );
-  logger(
-    "info",
-    `📄🗂️ Compiling page "${pageTypeName}" (${
-      page.id
-    }) in "${lang}": ${JSON.stringify(changeRes)}`
-  );
   if (changeRes.type === "unchanged") {
     outdatedPageWebPaths.delete(changeRes.currentWebPath);
     return;

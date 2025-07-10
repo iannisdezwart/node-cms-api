@@ -42,14 +42,14 @@ interface PopupResult {
   inputs: Map<string, string>;
 }
 
-const logPopup = (title: string) => {
+const logPopup = (title: string, disappearsAfterMs = 1000) => {
   const popupEl = document.createElement("div");
 
   popupEl.classList.add("popup");
 
   popupEl.innerHTML = /* html */ `
-    <h1 class="popup-title">${title}</h1>
-    <pre class="popup-log-body"></pre>
+  <h1 class="popup-title">${title}</h1>
+  <div class="popup-log-body"></div>
   `;
 
   // Add popup to the page
@@ -57,13 +57,13 @@ const logPopup = (title: string) => {
   document.body.appendChild(popupEl);
 
   return (bodyChunk?: string) => {
-    // Close popup when body is empty
+    // Close popup when body is null
 
-    if (bodyChunk == null) {
-      popupEl.classList.add("closed");
+    if (!bodyChunk) {
       setTimeout(() => {
-        popupEl.remove();
-      }, 300);
+        popupEl.classList.add("closed");
+        setTimeout(() => popupEl.remove(), 300);
+      }, disappearsAfterMs);
 
       return;
     }

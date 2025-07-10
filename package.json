@@ -1,6 +1,6 @@
 {
   "name": "node-cms-api",
-  "version": "1.0.9",
+  "version": "1.0.10",
   "description": "Node CMS API",
   "main": "./index.js",
   "scripts": {},
