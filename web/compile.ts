@@ -262,6 +262,8 @@ const compileVirtualPage = (
   );
   if (changeRes.type === "unchanged") {
     outdatedPageWebPaths.delete(changeRes.currentWebPath);
+  } else {
+    updatedPageTypes.add(pageTypeName);
   }
 };
 
