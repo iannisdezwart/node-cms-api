@@ -6,7 +6,7 @@ import { Settings } from "../settings";
 
 export const pageRouter = (settings: Settings, dbService: DbService): Router =>
   Router().get("*", (req, res, next) => {
-    const reqPath = normalize(req.path).replace(/\/$/, "");
+    const reqPath = normalize(req.path).replace(/(?<!^)\/$/, "");
     const lookup = dbService.compiledPages.get(reqPath);
 
     if ("error" in lookup) {
