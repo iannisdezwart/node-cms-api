@@ -23,7 +23,10 @@ const getSuToken = async (loginData?: {
   const res = await makeRequest(
     "/admin-panel/api/auth/login",
     "POST",
-    { loginData },
+    {
+      username: loginData.username,
+      password: loginData.password,
+    },
     { disableAuth: true }
   );
   if (!res.ok) {
